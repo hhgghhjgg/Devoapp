@@ -29,12 +29,6 @@ public class MainApplication extends Application implements ReactApplication {
         @Override
         protected List<ReactPackage> getPackages() {
             List<ReactPackage> packages = new PackageList(this).getPackages();
-
-            // پکیج‌های سفارشی خودت رو اینجا اضافه کن
-            // packages.add(new MyCustomCameraPackage());
-            // packages.add(new MyCustomSensorPackage());
-            // packages.add(new MyCustomBluetoothPackage());
-
             return packages;
         }
 
@@ -50,12 +44,12 @@ public class MainApplication extends Application implements ReactApplication {
 
         @Override
         protected boolean isNewArchEnabled() {
-            return BuildConfig.IS_NEW_ARCHITECTURE_ENABLED;
+            return false;
         }
 
         @Override
         protected Boolean isHermesEnabled() {
-            return BuildConfig.IS_HERMES_ENABLED;
+            return true;
         }
     };
 
@@ -70,25 +64,19 @@ public class MainApplication extends Application implements ReactApplication {
 
         Log.d(TAG, "MainApplication onCreate started");
 
-        // فعال کردن قابلیت‌های جدید React Native
-        ReactFeatureFlags.useTurboModules = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED;
+        ReactFeatureFlags.useTurboModules = false;
 
-        // بارگذاری کتابخانه‌های Native
-        SoLoader.init(this, /* native exopackage */ false);
+        SoLoader.init(this, false);
 
-        // غیرفعال کردن Flipper در حالت Release
         if (BuildConfig.DEBUG) {
             initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
         }
 
         Log.d(TAG, "MainApplication onCreate completed");
-        Log.d(TAG, "Hermes Enabled: " + BuildConfig.IS_HERMES_ENABLED);
-        Log.d(TAG, "New Architecture: " + BuildConfig.IS_NEW_ARCHITECTURE_ENABLED);
+        Log.d(TAG, "Hermes Enabled: true");
+        Log.d(TAG, "New Architecture: false");
     }
 
-    /**
-     * بارگذاری Flipper برای دیباگ (فقط در حالت Debug)
-     */
     private static void initializeFlipper(
             Context context, ReactInstanceManager reactInstanceManager) {
         if (BuildConfig.DEBUG) {
