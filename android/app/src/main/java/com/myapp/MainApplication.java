@@ -1,18 +1,15 @@
 package com.myapp;
 
 import android.app.Application;
-import android.content.Context;
 import android.util.Log;
 
-import com.facebook.react.PackageList;
 import com.facebook.react.ReactApplication;
-import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
-import com.facebook.react.config.ReactFeatureFlags;
+import com.facebook.react.shell.MainReactPackage;
 import com.facebook.soloader.SoLoader;
 
-import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainApplication extends Application implements ReactApplication {
@@ -28,8 +25,9 @@ public class MainApplication extends Application implements ReactApplication {
 
         @Override
         protected List<ReactPackage> getPackages() {
-            List<ReactPackage> packages = new PackageList(this).getPackages();
-            return packages;
+            return Arrays.<ReactPackage>asList(
+                new MainReactPackage()
+            );
         }
 
         @Override
@@ -61,39 +59,11 @@ public class MainApplication extends Application implements ReactApplication {
     @Override
     public void onCreate() {
         super.onCreate();
-
         Log.d(TAG, "MainApplication onCreate started");
-
-        ReactFeatureFlags.useTurboModules = false;
-
         SoLoader.init(this, false);
-
-        if (BuildConfig.DEBUG) {
-            initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
-        }
-
+        Log.d(TAG, "SoLoader initialized");
+        Log.d(TAG, "Hermes: enabled");
+        Log.d(TAG, "New Architecture: disabled");
         Log.d(TAG, "MainApplication onCreate completed");
-        Log.d(TAG, "Hermes Enabled: true");
-        Log.d(TAG, "New Architecture: false");
-    }
-
-    private static void initializeFlipper(
-            Context context, ReactInstanceManager reactInstanceManager) {
-        if (BuildConfig.DEBUG) {
-            try {
-                Class<?> aClass = Class.forName("com.myapp.ReactNativeFlipper");
-                aClass
-                    .getMethod("initializeFlipper", Context.class, ReactInstanceManager.class)
-                    .invoke(null, context, reactInstanceManager);
-            } catch (ClassNotFoundException e) {
-                Log.e(TAG, "Flipper class not found", e);
-            } catch (NoSuchMethodException e) {
-                Log.e(TAG, "Flipper method not found", e);
-            } catch (IllegalAccessException e) {
-                Log.e(TAG, "Flipper access error", e);
-            } catch (InvocationTargetException e) {
-                Log.e(TAG, "Flipper invocation error", e);
-            }
-        }
     }
 }
