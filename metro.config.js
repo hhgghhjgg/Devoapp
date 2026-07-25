@@ -18,19 +18,15 @@ const myappDir = path.resolve(__dirname, 'myapp');
  * @type {import('metro-config').MetroConfig}
  */
 const config = {
-  // مسیر ریشه پروژه
   projectRoot: root,
 
-  // پوشه‌هایی که Metro باید watch کند
   watchFolders: [
     root,
     myappDir,
     path.resolve(root, 'node_modules'),
   ],
 
-  // تنظیمات resolver
   resolver: {
-    // ماژول‌های اضافی برای resolve
     extraNodeModules: {
       'react': path.resolve(root, 'node_modules/react'),
       'react-native': path.resolve(root, 'node_modules/react-native'),
@@ -57,7 +53,6 @@ const config = {
       'react-native-worklets-core': path.resolve(root, 'node_modules/react-native-worklets-core'),
     },
 
-    // اکستنشن‌های source
     sourceExts: [
       'js',
       'jsx',
@@ -68,7 +63,6 @@ const config = {
       'mjs',
     ],
 
-    // اکستنشن‌های asset
     assetExts: [
       'bmp',
       'gif',
@@ -99,37 +93,24 @@ const config = {
       'zip',
     ],
 
-    // پلتفرم‌های پشتیبانی شده
     platforms: ['android', 'ios', 'native'],
 
-    // فیلدهای اصلی resolver
     resolverMainFields: ['sbmodern', 'react-native', 'browser', 'main'],
   },
 
-  // تنظیمات transformer
   transformer: {
-    // گزینه‌های transform
     getTransformOptions: async () => ({
       transform: {
         experimentalImportSupport: false,
         inlineRequires: true,
       },
     }),
-
-    // مسیر asset registry
-    assetRegistryPath: 'react-native/Libraries/Image/AssetRegistry',
-
-    // فعال کردن babel RC lookup
-    enableBabelRCLookup: true,
   },
 
-  // تنظیمات serializer
   serializer: {
-    // فیلتر ماژول‌ها
     processModuleFilter: (module) => {
       const modulePath = module.path;
 
-      // فیلتر ماژول‌های تست
       if (
         typeof modulePath === 'string' &&
         modulePath.includes('node_modules') &&
@@ -144,24 +125,6 @@ const config = {
       return true;
     },
   },
-
-  // تنظیمات server
-  server: {
-    // پورت سرور Metro
-    port: 8081,
-
-    // غیرفعال کردن HTTPS
-    https: false,
-
-    // غیرفعال کردن compression برای development سریع‌تر
-    compression: false,
-  },
-
-  // تنظیمات cache
-  resetCache: false,
-
-  // تعداد max workers
-  maxWorkers: 4,
 };
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);
