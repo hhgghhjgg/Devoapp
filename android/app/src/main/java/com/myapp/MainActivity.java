@@ -8,7 +8,6 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -21,7 +20,6 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -29,15 +27,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.facebook.react.PackageList;
 import com.facebook.react.ReactInstanceManager;
-import com.facebook.react.ReactPackage;
 import com.facebook.react.ReactRootView;
 import com.facebook.react.common.LifecycleState;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
+import com.facebook.react.shell.MainReactPackage;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,7 +66,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // تمام صفحه کردن
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -82,13 +77,8 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
             getWindow().setNavigationBarColor(Color.parseColor("#1a1a2e"));
         }
 
-        // تعیین مجوزهای مورد نیاز
         setupRequiredPermissions();
-
-        // ساخت UI اولیه (دکمه استارت)
         setupStartUI();
-
-        // کپی فایل‌های myapp از assets به حافظه داخلی
         copyMyAppFiles();
     }
 
@@ -109,11 +99,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
             permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
-            permissions.add(Manifest.permission.BLUETOOTH_SCAN);
-        }
-
         permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
         permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
 
@@ -121,18 +106,15 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
     }
 
     private void setupStartUI() {
-        // Layout اصلی
         mRootLayout = new FrameLayout(this);
         mRootLayout.setBackgroundColor(Color.parseColor("#1a1a2e"));
 
-        // Layout دکمه استارت
         mStartLayout = new LinearLayout(this);
         mStartLayout.setOrientation(LinearLayout.VERTICAL);
         mStartLayout.setGravity(Gravity.CENTER);
         mStartLayout.setBackgroundColor(Color.parseColor("#1a1a2e"));
         mStartLayout.setPadding(48, 48, 48, 48);
 
-        // عنوان اپ
         TextView titleText = new TextView(this);
         titleText.setText("My Dynamic App");
         titleText.setTextColor(Color.WHITE);
@@ -147,7 +129,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         titleText.setLayoutParams(titleParams);
         mStartLayout.addView(titleText);
 
-        // زیرعنوان
         TextView subtitleText = new TextView(this);
         subtitleText.setText("React Native Runtime Engine");
         subtitleText.setTextColor(Color.parseColor("#8888aa"));
@@ -161,7 +142,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         subtitleText.setLayoutParams(subtitleParams);
         mStartLayout.addView(subtitleText);
 
-        // دکمه استارت
         mStartButton = new Button(this);
         mStartButton.setText("▶  استارت");
         mStartButton.setTextColor(Color.WHITE);
@@ -170,7 +150,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         mStartButton.setAllCaps(false);
         mStartButton.setPadding(64, 32, 64, 32);
 
-        // استایل دکمه
         GradientDrawable buttonBackground = new GradientDrawable();
         buttonBackground.setShape(GradientDrawable.RECTANGLE);
         buttonBackground.setCornerRadius(50);
@@ -193,18 +172,14 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         });
         mStartLayout.addView(mStartButton);
 
-        // نوار بارگذاری
         mLoadingBar = new ProgressBar(this);
         mLoadingBar.setVisibility(View.GONE);
-        LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(
-            100, 100
-        );
+        LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(100, 100);
         progressParams.gravity = Gravity.CENTER;
         progressParams.bottomMargin = 24;
         mLoadingBar.setLayoutParams(progressParams);
         mStartLayout.addView(mLoadingBar);
 
-        // متن وضعیت
         mStatusText = new TextView(this);
         mStatusText.setText("آماده برای شروع");
         mStatusText.setTextColor(Color.parseColor("#aaaacc"));
@@ -218,11 +193,9 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         mStatusText.setLayoutParams(statusParams);
         mStartLayout.addView(mStatusText);
 
-        // لاگ‌ها
         mLogScrollView = new ScrollView(this);
         LinearLayout.LayoutParams logScrollParams = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            300
+            LinearLayout.LayoutParams.MATCH_PARENT, 300
         );
         logScrollParams.topMargin = 20;
         mLogScrollView.setLayoutParams(logScrollParams);
@@ -241,7 +214,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         mLogScrollView.addView(mLogText);
         mStartLayout.addView(mLogScrollView);
 
-        // اضافه کردن به layout اصلی
         FrameLayout.LayoutParams startLayoutParams = new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
@@ -258,12 +230,10 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         addLog("[INFO] دکمه استارت فشرده شد...");
         updateStatus("در حال بررسی مجوزها...");
 
-        // غیرفعال کردن دکمه
         mStartButton.setEnabled(false);
         mStartButton.setAlpha(0.5f);
         mLoadingBar.setVisibility(View.VISIBLE);
 
-        // بررسی و درخواست مجوزها
         if (checkAndRequestPermissions()) {
             addLog("[OK] تمام مجوزها تأیید شده‌اند");
             loadReactNativeApp();
@@ -328,16 +298,14 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         updateStatus("در حال بارگذاری موتور React Native...");
 
         try {
-            // ساخت ReactRootView
             mReactRootView = new ReactRootView(this);
 
-            // ساخت ReactInstanceManager
             mReactInstanceManager = ReactInstanceManager.builder()
                 .setApplication(getApplication())
                 .setCurrentActivity(this)
                 .setBundleAssetName("myapp/index.android.bundle")
                 .setJSMainModulePath("myapp/index")
-                .addPackages(getReactPackages())
+                .addPackage(new MainReactPackage())
                 .setUseDeveloperSupport(BuildConfig.DEBUG)
                 .setInitialLifecycleState(LifecycleState.RESUMED)
                 .build();
@@ -345,7 +313,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
             addLog("[OK] ReactInstanceManager ساخته شد");
             updateStatus("در حال اجرای اپلیکیشن...");
 
-            // شروع اپ ریاکت نیتیو
             Bundle initialProps = new Bundle();
             initialProps.putString("appPath", getMyAppPath());
             initialProps.putBoolean("isDynamic", true);
@@ -359,7 +326,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
             addLog("[OK] اپلیکیشن React Native شروع شد!");
             updateStatus("اپلیکیشن در حال اجراست ✓");
 
-            // جایگزینی UI با اپ ریاکت نیتیو
             mStartLayout.setVisibility(View.GONE);
             mRootLayout.addView(mReactRootView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -382,13 +348,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         }
     }
 
-    private List<ReactPackage> getReactPackages() {
-        List<ReactPackage> packages = new PackageList(getApplication()).getPackages();
-        // می‌تونی پکیج‌های سفارشی اینجا اضافه کنی
-        // packages.add(new MyCustomPackage());
-        return packages;
-    }
-
     private String getMyAppPath() {
         File myAppDir = new File(getFilesDir(), "myapp");
         if (!myAppDir.exists()) {
@@ -409,7 +368,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
                         targetDir.mkdirs();
                     }
 
-                    // کپی bundle از assets
                     copyAssetFile("myapp/index.android.bundle",
                         new File(targetDir, "index.android.bundle"));
 
@@ -421,10 +379,11 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
                     });
 
                 } catch (Exception e) {
+                    final String errorMsg = e.getMessage();
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            addLog("[WARN] کپی فایل: " + e.getMessage());
+                            addLog("[WARN] کپی فایل: " + errorMsg);
                         }
                     });
                 }
