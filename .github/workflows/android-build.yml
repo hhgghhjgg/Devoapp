@@ -2,85 +2,338 @@ name: Android Build APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+      - develop
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+      - develop
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build Type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+          - both
+      clear_cache:
+        description: 'Clear Gradle Cache'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '22'
+  JAVA_VERSION: '17'
+  GRADLE_VERSION: '8.6'
+  APP_NAME: 'MyApp'
+  PACKAGE_NAME: 'com.myapp'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    permissions:
+      contents: read
+      actions: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
 
-      - name: Set up JDK 17
+      - name: Display Build Info
+        run: |
+          echo "=========================================="
+          echo "  Build Information"
+          echo "=========================================="
+          echo "  Repository: ${{ github.repository }}"
+          echo "  Branch: ${{ github.ref_name }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Actor: ${{ github.actor }}"
+          echo "  Event: ${{ github.event_name }}"
+          echo "  Run ID: ${{ github.run_id }}"
+          echo "  Run Number: ${{ github.run_number }}"
+          echo "  Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "=========================================="
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'gradle'
 
-      - name: Set up Node.js
+      - name: Verify Java Installation
+        run: |
+          echo "Java Version:"
+          java -version
+          echo ""
+          echo "JAVA_HOME: $JAVA_HOME"
+          echo "Java Location: $(which java)"
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify Node.js Installation
+        run: |
+          echo "Node Version:"
+          node --version
+          echo ""
+          echo "NPM Version:"
+          npm --version
+          echo ""
+          echo "NPX Version:"
+          npx --version
+          echo ""
+          echo "Node Location: $(which node)"
+          echo "NPM Location: $(which npm)"
 
       - name: Cache Gradle packages
+        if: ${{ github.event.inputs.clear_cache != 'true' }}
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            ~/.gradle/daemon
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Install npm dependencies
-        run: npm ci
+      - name: Cache NPM packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
 
-      - name: Install myapp dependencies
-        run: cd myapp && npm ci
+      - name: Install Android SDK Components
+        run: |
+          echo "Installing Android SDK Components..."
+          if [ -d "$ANDROID_HOME" ]; then
+            echo "ANDROID_HOME: $ANDROID_HOME"
+            yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+            $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
+          else
+            echo "ANDROID_HOME not set, using pre-installed SDK"
+          fi
+
+      - name: Install root npm dependencies
+        run: |
+          echo "Installing root dependencies..."
+          npm install --legacy-peer-deps
+          echo ""
+          echo "Root dependencies installed successfully!"
+          echo "Node modules count: $(ls node_modules | wc -l)"
+
+      - name: Install myapp npm dependencies
+        run: |
+          echo "Installing myapp dependencies..."
+          cd myapp
+          npm install --legacy-peer-deps
+          echo ""
+          echo "Myapp dependencies installed successfully!"
+          echo "Node modules count: $(ls node_modules | wc -l)"
+
+      - name: Verify React Native Installation
+        run: |
+          echo "React Native Version:"
+          npx react-native --version || echo "React Native CLI not found"
+          echo ""
+          echo "Checking react-native in node_modules..."
+          if [ -d "node_modules/react-native" ]; then
+            echo "react-native found in root node_modules"
+            cat node_modules/react-native/package.json | grep '"version"' || true
+          else
+            echo "react-native NOT found in root node_modules"
+          fi
+          echo ""
+          if [ -d "myapp/node_modules/react-native" ]; then
+            echo "react-native found in myapp node_modules"
+            cat myapp/node_modules/react-native/package.json | grep '"version"' || true
+          else
+            echo "react-native NOT found in myapp node_modules"
+          fi
 
       - name: Create assets directory
-        run: mkdir -p android/app/src/main/assets/myapp
-
-      - name: Bundle React Native JS
         run: |
+          echo "Creating assets directory..."
+          mkdir -p android/app/src/main/assets/myapp
+          mkdir -p android/app/src/main/res
+          echo "Assets directory created!"
+          ls -la android/app/src/main/assets/
+
+      - name: Bundle React Native JS (Production)
+        run: |
+          echo "Bundling React Native JS for production..."
+          echo "Entry file: myapp/index.js"
+          echo "Output: android/app/src/main/assets/myapp/index.android.bundle"
+          echo ""
           npx react-native bundle \
             --platform android \
             --dev false \
             --entry-file myapp/index.js \
             --bundle-output android/app/src/main/assets/myapp/index.android.bundle \
-            --assets-dest android/app/src/main/res/
+            --assets-dest android/app/src/main/res/ \
+            --verbose
+          echo ""
+          echo "Bundle created successfully!"
+          echo "Bundle size: $(du -h android/app/src/main/assets/myapp/index.android.bundle | cut -f1)"
+
+      - name: Verify Bundle
+        run: |
+          echo "Verifying bundle..."
+          if [ -f "android/app/src/main/assets/myapp/index.android.bundle" ]; then
+            echo "✓ Bundle file exists"
+            echo "  Size: $(du -h android/app/src/main/assets/myapp/index.android.bundle | cut -f1)"
+            echo "  Lines: $(wc -l < android/app/src/main/assets/myapp/index.android.bundle)"
+          else
+            echo "✗ Bundle file NOT found!"
+            exit 1
+          fi
 
       - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
+        run: |
+          echo "Setting permissions..."
+          chmod +x android/gradlew
+          chmod +x android/gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
+          ls -la android/gradlew
+
+      - name: Verify Gradle Wrapper
+        run: |
+          echo "Gradle Wrapper Properties:"
+          cat android/gradle/wrapper/gradle-wrapper.properties
+          echo ""
+          echo "Checking gradlew..."
+          cd android && ./gradlew --version
 
       - name: Build Debug APK
-        run: cd android && ./gradlew assembleDebug
+        if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'both' || github.event_name == 'push' || github.event_name == 'pull_request' }}
+        run: |
+          echo "Building Debug APK..."
+          cd android
+          ./gradlew assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+          echo ""
+          echo "Debug APK built successfully!"
 
       - name: Build Release APK
-        run: cd android && ./gradlew assembleRelease
+        if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' || github.event_name == 'push' }}
+        run: |
+          echo "Building Release APK..."
+          cd android
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+          echo ""
+          echo "Release APK built successfully!"
+
+      - name: Build Release AAB
+        if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' }}
+        run: |
+          echo "Building Release AAB..."
+          cd android
+          ./gradlew bundleRelease \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+          echo ""
+          echo "Release AAB built successfully!"
+
+      - name: List Build Outputs
+        run: |
+          echo "=========================================="
+          echo "  Build Outputs"
+          echo "=========================================="
+          echo ""
+          echo "Debug APKs:"
+          find android/app/build/outputs/apk/debug -name "*.apk" -exec ls -lh {} \; 2>/dev/null || echo "  No debug APKs found"
+          echo ""
+          echo "Release APKs:"
+          find android/app/build/outputs/apk/release -name "*.apk" -exec ls -lh {} \; 2>/dev/null || echo "  No release APKs found"
+          echo ""
+          echo "Release AABs:"
+          find android/app/build/outputs/bundle/release -name "*.aab" -exec ls -lh {} \; 2>/dev/null || echo "  No release AABs found"
+          echo ""
+          echo "=========================================="
 
       - name: Upload Debug APK
+        if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'both' || github.event_name == 'push' || github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: ${{ env.APP_NAME }}-debug-apk-${{ github.run_number }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+          if-no-files-found: warn
 
       - name: Upload Release APK
+        if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' || github.event_name == 'push' }}
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
+          name: ${{ env.APP_NAME }}-release-apk-${{ github.run_number }}
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
+          if-no-files-found: warn
 
       - name: Upload Release AAB
+        if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' }}
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-aab
+          name: ${{ env.APP_NAME }}-release-aab-${{ github.run_number }}
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ github.run_number }}
+          path: |
+            android/app/build/reports/
+            android/app/build/outputs/logs/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "  Build Summary"
+          echo "=========================================="
+          echo "  Status: ${{ job.status }}"
+          echo "  Repository: ${{ github.repository }}"
+          echo "  Branch: ${{ github.ref_name }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Actor: ${{ github.actor }}"
+          echo "  Duration: ${{ github.run_id }}"
+          echo "  Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "=========================================="
+          echo ""
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Build completed successfully!"
+          else
+            echo "❌ Build failed!"
+          fi
+          echo "=========================================="
