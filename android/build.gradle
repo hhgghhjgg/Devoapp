@@ -1,0 +1,61 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    ext {
+        buildToolsVersion = "34.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 34
+        targetSdkVersion = 34
+        ndkVersion = "26.1.10909125"
+        kotlinVersion = "1.9.22"
+    }
+
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.3.1")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+
+        // مخزن اختصاصی React Native
+        maven {
+            url("$rootDir/../node_modules/react-native/android")
+        }
+
+        // مخزن Hermes
+        maven {
+            url("$rootDir/../node_modules/react-native/sdks/hermes/android/")
+        }
+    }
+}
+
+// پاکسازی خودکار کش‌های قدیمی
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}
+
+// بررسی نسخه‌های سازگار
+tasks.register('checkDependencies') {
+    doLast {
+        println "=== Dependency Check ==="
+        println "Build Tools: ${buildToolsVersion}"
+        println "Min SDK: ${minSdkVersion}"
+        println "Target SDK: ${targetSdkVersion}"
+        println "Compile SDK: ${compileSdkVersion}"
+        println "NDK Version: ${ndkVersion}"
+        println "Kotlin Version: ${kotlinVersion}"
+        println "========================"
+    }
+}
