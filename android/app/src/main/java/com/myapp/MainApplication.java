@@ -36,16 +36,6 @@ public class MainApplication extends Application implements ReactApplication {
         protected String getBundleAssetName() {
             return "myapp/index.android.bundle";
         }
-
-        @Override
-        protected boolean isNewArchEnabled() {
-            return false;
-        }
-
-        @Override
-        protected Boolean isHermesEnabled() {
-            return true;
-        }
     };
 
     @Override
