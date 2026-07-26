@@ -1,0 +1,281 @@
+name: Diagnose All Problems
+
+on:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Create Reports Directory
+        run: mkdir -p reports
+
+      - name: "[1/10] Check Project Structure"
+        run: |
+          {
+            echo "=========================================="
+            echo "  PROJECT STRUCTURE"
+            echo "=========================================="
+            echo ""
+            echo "--- Root Directory ---"
+            ls -la
+            echo ""
+            echo "--- myapp Directory ---"
+            ls -la myapp/ 2>/dev/null || echo "myapp NOT FOUND!"
+            echo ""
+            echo "--- android Directory ---"
+            ls -la android/ 2>/dev/null || echo "android NOT FOUND!"
+            echo ""
+            echo "--- android/app ---"
+            ls -la android/app/ 2>/dev/null || echo "android/app NOT FOUND!"
+            echo ""
+            echo "--- Required Files Check ---"
+            for f in package.json metro.config.js babel.config.js myapp/index.js myapp/App.js myapp/app.json android/build.gradle android/settings.gradle android/app/build.gradle android/app/src/main/AndroidManifest.xml; do
+              if [ -f "$f" ]; then
+                echo "  [OK] $f"
+              else
+                echo "  [MISSING] $f"
+              fi
+            done
+          } | tee reports/01-structure.txt
+
+      - name: "[2/10] Check Duplicate React Native"
+        run: |
+          {
+            echo "=========================================="
+            echo "  DUPLICATE REACT NATIVE CHECK"
+            echo "=========================================="
+            echo ""
+            echo "--- Root package.json react-native ---"
+            grep '"react-native"' package.json || echo "  not in root package.json"
+            grep '"react"' package.json | head -1 || echo "  react not in root"
+            echo ""
+            echo "--- myapp package.json react-native ---"
+            grep '"react-native"' myapp/package.json 2>/dev/null && echo "  [WARNING] react-native ALSO in myapp!" || echo "  [OK] react-native NOT in myapp"
+            echo ""
+            echo "--- Physical node_modules check ---"
+            if [ -d "node_modules/react-native" ]; then
+              echo "  [OK] root/node_modules/react-native exists"
+              echo "  Version: $(cat node_modules/react-native/package.json 2>/dev/null | grep '"version"' | head -1)"
+            else
+              echo "  [INFO] root node_modules not installed yet"
+            fi
+            if [ -d "myapp/node_modules/react-native" ]; then
+              echo "  [WARNING] myapp/node_modules/react-native EXISTS - this causes 'window' crash!"
+            else
+              echo "  [OK] myapp/node_modules/react-native does not exist"
+            fi
+          } | tee reports/02-duplicate-rn.txt
+
+      - name: "[3/10] Install Root Dependencies"
+        run: |
+          npm install --legacy-peer-deps 2>&1 | tee reports/03-npm-install.txt
+          echo "" >> reports/03-npm-install.txt
+          echo "Installed react-native version:" >> reports/03-npm-install.txt
+          cat node_modules/react-native/package.json | grep '"version"' | head -1 >> reports/03-npm-install.txt
+
+      - name: "[4/10] Validate metro.config.js"
+        run: |
+          {
+            echo "=========================================="
+            echo "  METRO CONFIG VALIDATION"
+            echo "=========================================="
+            node -e "
+              try {
+                const config = require('./metro.config.js');
+                console.log('[OK] metro.config.js loads successfully');
+                console.log('projectRoot:', config.projectRoot || 'default');
+                console.log('watchFolders:', JSON.stringify(config.watchFolders || []));
+                console.log('blockList:', JSON.stringify((config.resolver && config.resolver.blockList || []).map(String)));
+                console.log('getModulesRunBeforeMainModule:', typeof (config.serializer && config.serializer.getModulesRunBeforeMainModule));
+              } catch (e) {
+                console.log('[ERROR] metro.config.js failed to load:');
+                console.log(e.message);
+                console.log(e.stack);
+              }
+            "
+          } | tee reports/04-metro-config.txt
+
+      - name: "[5/10] Validate babel.config.js"
+        run: |
+          {
+            echo "=========================================="
+            echo "  BABEL CONFIG VALIDATION"
+            echo "=========================================="
+            node -e "
+              try {
+                const config = require('./babel.config.js');
+                console.log('[OK] babel.config.js loads successfully');
+                console.log('presets:', JSON.stringify(config.presets));
+                console.log('plugins:', JSON.stringify(config.plugins || []));
+              } catch (e) {
+                console.log('[ERROR] babel.config.js failed to load:');
+                console.log(e.message);
+              }
+            "
+          } | tee reports/05-babel-config.txt
+
+      - name: "[6/10] Syntax Check All JS Files"
+        run: |
+          {
+            echo "=========================================="
+            echo "  JS SYNTAX CHECK"
+            echo "=========================================="
+            echo ""
+            echo "--- myapp/index.js ---"
+            node --check myapp/index.js 2>&1 && echo "  [OK] syntax valid" || echo "  [NOTE] JSX/ESM - needs babel (expected)"
+            echo ""
+            echo "--- Checking for dangerous patterns in App.js ---"
+            echo "Optional chaining (?.) count:"
+            grep -c '?\.' myapp/App.js 2>/dev/null || echo "0"
+            echo "Nullish coalescing (??) count:"
+            grep -c '??' myapp/App.js 2>/dev/null || echo "0"
+            echo "window references:"
+            grep -n 'window\.' myapp/App.js 2>/dev/null || echo "  none"
+            echo "document references:"
+            grep -n 'document\.' myapp/App.js 2>/dev/null || echo "  none"
+          } | tee reports/06-js-syntax.txt
+
+      - name: "[7/10] Build JS Bundle (Full Verbose)"
+        run: |
+          mkdir -p android/app/src/main/assets/myapp
+          {
+            echo "=========================================="
+            echo "  BUNDLE BUILD"
+            echo "=========================================="
+          } | tee reports/07-bundle.txt
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file myapp/index.js \
+            --bundle-output android/app/src/main/assets/myapp/index.android.bundle \
+            --assets-dest android/app/src/main/res/ \
+            --verbose >> reports/07-bundle.txt 2>&1 && echo "BUNDLE_OK" >> reports/07-bundle.txt || echo "BUNDLE_FAILED" >> reports/07-bundle.txt
+          tail -30 reports/07-bundle.txt
+
+      - name: "[8/10] Analyze Bundle Content"
+        run: |
+          {
+            echo "=========================================="
+            echo "  BUNDLE CONTENT ANALYSIS"
+            echo "=========================================="
+            BUNDLE="android/app/src/main/assets/myapp/index.android.bundle"
+            if [ -f "$BUNDLE" ]; then
+              echo "Bundle size: $(du -h $BUNDLE | cut -f1)"
+              echo ""
+              echo "--- Critical Checks ---"
+              if grep -q "InitializeCore" "$BUNDLE"; then
+                echo "  [OK] InitializeCore is IN the bundle"
+              else
+                echo "  [CRITICAL] InitializeCore MISSING - this causes 'window' crash!"
+              fi
+              if grep -q "global.window" "$BUNDLE"; then
+                echo "  [OK] window polyfill found (global.window)"
+              else
+                echo "  [WARNING] global.window assignment not found"
+              fi
+              if grep -q "AppRegistry" "$BUNDLE"; then
+                echo "  [OK] AppRegistry found"
+              else
+                echo "  [CRITICAL] AppRegistry MISSING"
+              fi
+              if grep -q "MyApp" "$BUNDLE"; then
+                echo "  [OK] App name 'MyApp' registered"
+              else
+                echo "  [WARNING] 'MyApp' not found in bundle"
+              fi
+              if grep -q "__fbBatchedBridge" "$BUNDLE"; then
+                echo "  [OK] Native bridge code found"
+              else
+                echo "  [WARNING] bridge code not found"
+              fi
+              echo ""
+              echo "--- How many react-native copies in bundle ---"
+              echo "react-native paths referenced:"
+              grep -o 'node_modules[^"]*react-native' "$BUNDLE" 2>/dev/null | sort -u | head -20 || echo "  (minified, paths hidden)"
+            else
+              echo "[CRITICAL] Bundle file was NOT created!"
+            fi
+          } | tee reports/08-bundle-analysis.txt
+
+      - name: "[9/10] Check Android Native Files"
+        run: |
+          {
+            echo "=========================================="
+            echo "  ANDROID NATIVE CHECK"
+            echo "=========================================="
+            echo ""
+            echo "--- MainApplication.java key settings ---"
+            grep -n "getUseDeveloperSupport\|getBundleAssetName\|getJSMainModuleName\|getPackages" android/app/src/main/java/com/myapp/MainApplication.java 2>/dev/null
+            echo ""
+            echo "--- MainActivity.java app name ---"
+            grep -n 'APP_NAME =' android/app/src/main/java/com/myapp/MainActivity.java 2>/dev/null
+            echo ""
+            echo "--- app.json name (must match APP_NAME) ---"
+            cat myapp/app.json
+            echo ""
+            echo "--- build.gradle react version ---"
+            grep -n "reactNativeVersion\|react-android\|hermes" android/build.gradle android/app/build.gradle 2>/dev/null
+          } | tee reports/09-native-check.txt
+
+      - name: "[10/10] Generate Final Diagnosis"
+        run: |
+          {
+            echo "=========================================="
+            echo "  FINAL DIAGNOSIS REPORT"
+            echo "=========================================="
+            echo ""
+            echo "Generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+            echo "=== SUMMARY OF ALL CHECKS ==="
+            echo ""
+            echo "[Check 1] Project Structure: see 01-structure.txt"
+            echo "[Check 2] Duplicate RN:      see 02-duplicate-rn.txt"
+            echo "[Check 3] NPM Install:        see 03-npm-install.txt"
+            echo "[Check 4] Metro Config:       see 04-metro-config.txt"
+            echo "[Check 5] Babel Config:       see 05-babel-config.txt"
+            echo "[Check 6] JS Syntax:          see 06-js-syntax.txt"
+            echo "[Check 7] Bundle Build:       see 07-bundle.txt"
+            echo "[Check 8] Bundle Analysis:    see 08-bundle-analysis.txt"
+            echo "[Check 9] Native Files:       see 09-native-check.txt"
+            echo ""
+            echo "=== AUTOMATIC DETECTIONS ==="
+            echo ""
+            if [ -d "myapp/node_modules/react-native" ]; then
+              echo "[PROBLEM] Duplicate react-native in myapp/node_modules"
+              echo "  FIX: remove react-native from myapp/package.json"
+            fi
+            if grep -q "BUNDLE_FAILED" reports/07-bundle.txt 2>/dev/null; then
+              echo "[PROBLEM] Bundle build FAILED - check 07-bundle.txt"
+            fi
+            BUNDLE="android/app/src/main/assets/myapp/index.android.bundle"
+            if [ -f "$BUNDLE" ] && ! grep -q "InitializeCore" "$BUNDLE"; then
+              echo "[PROBLEM] InitializeCore missing from bundle"
+              echo "  FIX: use default metro config (mergeConfig with getDefaultConfig)"
+            fi
+            echo ""
+            echo "=== ALL CHECKS COMPLETE ==="
+          } | tee reports/10-final-diagnosis.txt
+
+      - name: Upload Full Diagnosis Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnosis-report-${{ github.run_number }}
+          path: reports/
+          retention-days: 14
+
+      - name: Print Final Report
+        run: cat reports/10-final-diagnosis.txt
