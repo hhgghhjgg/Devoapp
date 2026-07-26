@@ -29,9 +29,7 @@ import androidx.core.content.ContextCompat;
 
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactRootView;
-import com.facebook.react.common.LifecycleState;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
-import com.facebook.react.shell.MainReactPackage;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -300,17 +298,11 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
         try {
             mReactRootView = new ReactRootView(this);
 
-            mReactInstanceManager = ReactInstanceManager.builder()
-                .setApplication(getApplication())
-                .setCurrentActivity(this)
-                .setBundleAssetName("myapp/index.android.bundle")
-                .setJSMainModulePath("myapp/index")
-                .addPackage(new MainReactPackage())
-                .setUseDeveloperSupport(BuildConfig.DEBUG)
-                .setInitialLifecycleState(LifecycleState.RESUMED)
-                .build();
+            mReactInstanceManager = ((MainApplication) getApplication())
+                .getReactNativeHost()
+                .getReactInstanceManager();
 
-            addLog("[OK] ReactInstanceManager ساخته شد");
+            addLog("[OK] ReactInstanceManager از ReactNativeHost گرفته شد");
             updateStatus("در حال اجرای اپلیکیشن...");
 
             Bundle initialProps = new Bundle();
