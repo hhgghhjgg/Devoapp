@@ -302,7 +302,7 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
                 .getReactNativeHost()
                 .getReactInstanceManager();
 
-            addLog("[OK] ReactInstanceManager از ReactNativeHost گرفته شد");
+            addLog("[OK] ReactInstanceManager گرفته شد");
             updateStatus("در حال اجرای اپلیکیشن...");
 
             Bundle initialProps = new Bundle();
@@ -315,6 +315,10 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
                 initialProps
             );
 
+            mIsReactLoaded = true;
+
+            mReactInstanceManager.onHostResume(this, this);
+
             addLog("[OK] اپلیکیشن React Native شروع شد!");
             updateStatus("اپلیکیشن در حال اجراست ✓");
 
@@ -324,7 +328,6 @@ public class MainActivity extends AppCompatActivity implements DefaultHardwareBa
                 FrameLayout.LayoutParams.MATCH_PARENT
             ));
 
-            mIsReactLoaded = true;
             mIsLoading = false;
 
             addLog("[SUCCESS] ✓ اپلیکیشن با موفقیت بارگذاری شد!");
