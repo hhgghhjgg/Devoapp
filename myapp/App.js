@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { Component, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,34 +6,31 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  SafeAreaView,
-  Image,
   Alert,
   Platform,
   PermissionsAndroid,
-  NativeModules,
   Dimensions,
   Animated,
   Easing,
   ActivityIndicator,
-  TextInput,
   Switch,
-  RefreshControl,
 } from 'react-native';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+var SCREEN_WIDTH = 360;
+var SCREEN_HEIGHT = 640;
+try {
+  var dims = Dimensions.get('window');
+  SCREEN_WIDTH = dims.width;
+  SCREEN_HEIGHT = dims.height;
+} catch (e) {}
 
-// ============================================================
-// رنگ‌های تم اپلیکیشن
-// ============================================================
-const COLORS = {
+var COLORS = {
   primary: '#e94560',
   primaryDark: '#c73e54',
   secondary: '#0f3460',
   background: '#1a1a2e',
   backgroundLight: '#16213e',
   card: '#0f3460',
-  cardLight: '#1a4080',
   text: '#ffffff',
   textSecondary: '#8888aa',
   textMuted: '#555577',
@@ -42,326 +39,244 @@ const COLORS = {
   error: '#ff4444',
   info: '#4488ff',
   border: '#2a2a4e',
-  overlay: 'rgba(0,0,0,0.7)',
-  gradient1: '#e94560',
-  gradient2: '#0f3460',
-  shadow: 'rgba(0,0,0,0.3)',
 };
 
-// ============================================================
-// آیکون‌های ساده (بدون نیاز به کتابخانه خارجی)
-// ============================================================
-const Icons = {
+var Icons = {
   camera: '📷',
   gallery: '🖼️',
   settings: '⚙️',
   home: '🏠',
   info: 'ℹ️',
   refresh: '🔄',
-  save: '💾',
   trash: '🗑️',
-  play: '▶️',
-  stop: '⏹️',
-  check: '✅',
   close: '❌',
-  warning: '⚠️',
   location: '📍',
   bluetooth: '🔵',
-  wifi: '📶',
   battery: '🔋',
   sensor: '📡',
-  mic: '🎤',
   flash: '⚡',
-  timer: '⏱️',
   filter: '🎨',
-  share: '📤',
-  download: '📥',
-  lock: '🔒',
-  unlock: '🔓',
-  star: '⭐',
-  heart: '❤️',
-  user: '👤',
   search: '🔍',
-  plus: '➕',
-  minus: '➖',
-  edit: '✏️',
-  copy: '📋',
-  send: '📨',
-  phone: '📞',
-  mail: '📧',
-  calendar: '📅',
-  clock: '🕐',
   folder: '📁',
-  file: '📄',
-  code: '💻',
-  rocket: '🚀',
-  fire: '🔥',
-  lightning: '⚡',
-  globe: '🌐',
-  shield: '🛡️',
-  key: '🔑',
-  bell: '🔔',
-  volume: '🔊',
-  mute: '🔇',
-  sun: '☀️',
-  moon: '🌙',
-  cloud: '☁️',
-  rain: '🌧️',
-  snow: '❄️',
-  wind: '💨',
-  thermometer: '🌡️',
-  compass: '🧭',
-  map: '🗺️',
-  car: '🚗',
-  plane: '✈️',
-  train: '🚆',
-  bike: '🚲',
-  walk: '🚶',
-  run: '🏃',
-  swim: '🏊',
-  ball: '⚽',
-  trophy: '🏆',
-  medal: '🥇',
-  gift: '🎁',
-  music: '🎵',
   video: '🎬',
-  book: '📚',
-  pen: '🖊️',
-  brush: '🖌️',
-  scissors: '✂️',
-  ruler: '📏',
-  magnet: '🧲',
-  bulb: '💡',
-  wrench: '🔧',
-  hammer: '🔨',
-  screwdriver: '🪛',
-  gear: '⚙️',
-  nut: '🔩',
-  plug: '🔌',
-  batteryFull: '🔋',
-  batteryLow: '🪫',
-  signal: '📶',
-  satellite: '📡',
-  telescope: '🔭',
-  microscope: '🔬',
-  dna: '🧬',
-  atom: '⚛️',
-  planet: '🪐',
-  star2: '🌟',
-  comet: '☄️',
-  explosion: '💥',
-  sparkles: '✨',
-  rainbow: '🌈',
-  umbrella: '☂️',
-  snowflake: '❄️',
-  tornado: '🌪️',
-  volcano: '🌋',
-  mountain: '⛰️',
-  island: '🏝️',
-  beach: '🏖️',
-  city: '🏙️',
-  castle: '🏰',
-  house: '🏠',
-  building: '🏢',
-  factory: '🏭',
-  hospital: '🏥',
-  school: '🏫',
-  church: '⛪',
-  mosque: '🕌',
-  temple: '🛕',
-  stadium: '🏟️',
-  bridge: '🌉',
-  fountain: '⛲',
-  tent: '⛺',
-  campfire: '🏕️',
-  sunrise: '🌅',
-  sunset: '🌇',
-  night: '🌃',
-  fog: '🌫️',
-  lightning2: '🌩️',
-  hurricane: '🌀',
-  droplet: '💧',
-  ocean: '🌊',
-  fish: '🐟',
-  whale: '🐋',
-  shark: '🦈',
-  octopus: '🐙',
-  crab: '🦀',
-  lobster: '🦞',
-  shrimp: '🦐',
-  snail: '🐌',
-  butterfly: '🦋',
-  bee: '🐝',
-  ant: '🐜',
-  spider: '🕷️',
-  web: '🕸️',
-  turtle: '🐢',
-  snake: '🐍',
-  lizard: '🦎',
-  frog: '🐸',
-  rabbit: '🐰',
-  cat: '🐱',
-  dog: '🐶',
-  wolf: '🐺',
-  fox: '🦊',
-  bear: '🐻',
-  panda: '🐼',
-  koala: '🐨',
-  tiger: '🐯',
-  lion: '🦁',
-  cow: '🐮',
-  pig: '🐷',
-  sheep: '🐑',
-  goat: '🐐',
-  deer: '🦌',
-  horse: '🐴',
-  unicorn: '🦄',
-  chicken: '🐔',
-  rooster: '🐓',
-  turkey: '🦃',
-  duck: '🦆',
-  eagle: '🦅',
-  owl: '🦉',
-  parrot: '🦜',
-  flamingo: '🦩',
-  peacock: '🦚',
-  penguin: '🐧',
-  dove: '🕊️',
-  swan: '🦢',
-  goose: '🪿',
-  bat: '🦇',
-  monkey: '🐵',
-  gorilla: '🦍',
-  orangutan: '🦧',
-  elephant: '🐘',
-  rhino: '🦏',
-  hippo: '🦛',
-  giraffe: '🦒',
-  zebra: '🦓',
-  camel: '🐪',
-  llama: '🦙',
-  kangaroo: '🦘',
-  sloth: '🦥',
-  otter: '🦦',
-  beaver: '🦫',
-  hedgehog: '🦔',
-  raccoon: '🦝',
-  skunk: '🦨',
-  badger: '🦡',
-  mole: '🐀',
-  mouse: '🐭',
-  rat: '🐀',
-  hamster: '🐹',
-  guineaPig: '🐹',
-  chinchilla: '🐹',
-  ferret: '🦡',
-  armadillo: '🦔',
-  anteater: '🐜',
-  platypus: '🦆',
-  echidna: '🦔',
-  wombat: '🐻',
-  possum: '🐀',
-  sugarGlider: '🐿️',
-  squirrel: '🐿️',
-  chipmunk: '🐿️',
-  prairieDog: '🐿️',
-  marmot: '🐿️',
-  groundhog: '🐿️',
-  capybara: '🐹',
-  porcupine: '🦔',
-  pangolin: '🦔',
-  aardvark: '🐜',
-  tapir: '🐷',
-  peccary: '🐷',
-  warthog: '🐗',
-  boar: '🐗',
-  bison: '🐂',
-  buffalo: '🐃',
-  yak: '🐂',
-  muskox: '🐂',
-  antelope: '🦌',
-  gazelle: '🦌',
-  impala: '🦌',
-  wildebeest: '🦌',
-  moose: '🫎',
-  elk: '🫎',
-  caribou: '🦌',
-  reindeer: '🦌',
-  okapi: '🦒',
-  bongo: '🦌',
-  nyala: '🦌',
-  kudu: '🦌',
-  oryx: '🦌',
-  addax: '🦌',
-  dikDik: '🦌',
-  duiker: '🦌',
-  steenbok: '🦌',
-  grysbok: '🦌',
-  klipspringer: '🦌',
-  oribi: '🦌',
-  roan: '🦌',
-  sable: '🦌',
-  hartebeest: '🦌',
-  topi: '🦌',
-  tsessebe: '🦌',
-  blesbok: '🦌',
-  springbok: '🦌',
-  waterbuck: '🦌',
-  kob: '🦌',
-  lechwe: '🦌',
-  puku: '🦌',
-  sitatunga: '🦌',
-  bushbuck: '🦌',
-  nyala2: '🦌',
-  greaterKudu: '🦌',
-  lesserKudu: '🦌',
-  mountainNyala: '🦌',
-  bongo2: '🦌',
-  okapi2: '🦒',
-  giraffe2: '🦒',
-  zebra2: '🦓',
-  horse2: '🐴',
-  donkey: '🫏',
-  mule: '🫏',
-  pony: '🐴',
-  foal: '🐴',
-  stallion: '🐴',
-  mare: '🐴',
-  colt: '🐴',
-  filly: '🐴',
-  gelding: '🐴',
-  yearling: '🐴',
-  weanling: '🐴',
-  broodmare: '🐴',
-  sire: '🐴',
-  dam: '🐴',
+  unlock: '🔓',
+  lightning: '⚡',
 };
 
 // ============================================================
-// کامپوننت دکمه سفارشی
+// Error Boundary - هیچوقت crash نمی‌کنه
 // ============================================================
-const CustomButton = ({
-  title,
-  onPress,
-  icon,
-  color = COLORS.primary,
-  textColor = COLORS.text,
-  style,
-  textStyle,
-  disabled = false,
-  loading = false,
-  size = 'medium',
-  fullWidth = false,
-}) => {
-  const [pressed, setPressed] = useState(false);
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      copied: false,
+    };
+  }
 
-  const sizes = {
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error: error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({
+      error: error,
+      errorInfo: errorInfo,
+    });
+  }
+
+  copyError = () => {
+    var errorText = '=== ERROR ===\n';
+    if (this.state.error) {
+      errorText = errorText + 'Message: ' + String(this.state.error.message) + '\n';
+      errorText = errorText + 'Stack: ' + String(this.state.error.stack) + '\n';
+    }
+    if (this.state.errorInfo) {
+      errorText = errorText + 'Component Stack: ' + String(this.state.errorInfo.componentStack) + '\n';
+    }
+    try {
+      var React = require('react-native');
+      if (React.Clipboard) {
+        React.Clipboard.setString(errorText);
+        this.setState({ copied: true });
+      }
+    } catch (e) {}
+    Alert.alert('خطا کپی شد', errorText);
+  };
+
+  resetError = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      copied: false,
+    });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      var errorMsg = 'Unknown Error';
+      var errorStack = '';
+      var componentStack = '';
+
+      if (this.state.error) {
+        errorMsg = String(this.state.error.message || 'Unknown Error');
+        errorStack = String(this.state.error.stack || '');
+      }
+      if (this.state.errorInfo && this.state.errorInfo.componentStack) {
+        componentStack = String(this.state.errorInfo.componentStack);
+      }
+
+      return (
+        <View style={errorStyles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#1a0000" />
+          <ScrollView style={errorStyles.scrollView}>
+            <Text style={errorStyles.emoji}>💥</Text>
+            <Text style={errorStyles.title}>خطایی رخ داد!</Text>
+            <Text style={errorStyles.subtitle}>اپ crash نکرد. خطا رو کپی کن و بفرست.</Text>
+
+            <View style={errorStyles.errorBox}>
+              <Text style={errorStyles.errorLabel}>Message:</Text>
+              <Text style={errorStyles.errorText}>{errorMsg}</Text>
+            </View>
+
+            {errorStack !== '' ? (
+              <View style={errorStyles.errorBox}>
+                <Text style={errorStyles.errorLabel}>Stack:</Text>
+                <Text style={errorStyles.errorTextSmall}>{errorStack}</Text>
+              </View>
+            ) : null}
+
+            {componentStack !== '' ? (
+              <View style={errorStyles.errorBox}>
+                <Text style={errorStyles.errorLabel}>Component:</Text>
+                <Text style={errorStyles.errorTextSmall}>{componentStack}</Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity style={errorStyles.copyButton} onPress={this.copyError}>
+              <Text style={errorStyles.copyButtonText}>
+                {this.state.copied ? '✅ کپی شد!' : '📋 کپی خطا'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={errorStyles.retryButton} onPress={this.resetError}>
+              <Text style={errorStyles.retryButtonText}>🔄 تلاش مجدد</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+var errorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a0000',
+  },
+  scrollView: {
+    flex: 1,
+    padding: 20,
+  },
+  emoji: {
+    fontSize: 60,
+    textAlign: 'center',
+    marginTop: 40,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ff4444',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#ffaaaa',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  errorBox: {
+    backgroundColor: '#2a0000',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ff4444',
+  },
+  errorLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ff8888',
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ffffff',
+    lineHeight: 20,
+  },
+  errorTextSmall: {
+    fontSize: 10,
+    color: '#ffcccc',
+    lineHeight: 16,
+  },
+  copyButton: {
+    backgroundColor: '#e94560',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  copyButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  retryButton: {
+    backgroundColor: '#0f3460',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 40,
+  },
+  retryButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+});
+
+// ============================================================
+// کامپوننت‌های UI
+// ============================================================
+
+var CustomButton = function(props) {
+  var title = props.title;
+  var onPress = props.onPress;
+  var icon = props.icon;
+  var color = props.color || COLORS.primary;
+  var textColor = props.textColor || COLORS.text;
+  var style = props.style;
+  var disabled = props.disabled || false;
+  var loading = props.loading || false;
+  var size = props.size || 'medium';
+  var fullWidth = props.fullWidth || false;
+
+  var sizes = {
     small: { paddingVertical: 8, paddingHorizontal: 16, fontSize: 13 },
     medium: { paddingVertical: 14, paddingHorizontal: 24, fontSize: 16 },
     large: { paddingVertical: 18, paddingHorizontal: 32, fontSize: 18 },
   };
 
-  const currentSize = sizes[size] || sizes.medium;
+  var currentSize = sizes[size] || sizes.medium;
 
   return (
     <TouchableOpacity
@@ -371,49 +286,44 @@ const CustomButton = ({
           backgroundColor: disabled ? COLORS.textMuted : color,
           paddingVertical: currentSize.paddingVertical,
           paddingHorizontal: currentSize.paddingHorizontal,
-          opacity: pressed ? 0.8 : 1,
-          transform: [{ scale: pressed ? 0.97 : 1 }],
           width: fullWidth ? '100%' : 'auto',
         },
         style,
       ]}
       onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
       disabled={disabled || loading}
       activeOpacity={0.8}
     >
       {loading ? (
         <ActivityIndicator size="small" color={textColor} />
       ) : (
-        <>
-          {icon && (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {icon ? (
             <Text style={{ fontSize: currentSize.fontSize + 2, marginRight: 8 }}>
               {icon}
             </Text>
-          )}
+          ) : null}
           <Text
             style={[
               styles.buttonText,
-              {
-                color: textColor,
-                fontSize: currentSize.fontSize,
-              },
-              textStyle,
+              { color: textColor, fontSize: currentSize.fontSize },
             ]}
           >
             {title}
           </Text>
-        </>
+        </View>
       )}
     </TouchableOpacity>
   );
 };
 
-// ============================================================
-// کامپوننت کارت
-// ============================================================
-const Card = ({ children, style, title, icon, onPress }) => {
+var Card = function(props) {
+  var children = props.children;
+  var style = props.style;
+  var title = props.title;
+  var icon = props.icon;
+  var onPress = props.onPress;
+
   return (
     <TouchableOpacity
       style={[styles.card, style]}
@@ -421,94 +331,89 @@ const Card = ({ children, style, title, icon, onPress }) => {
       activeOpacity={onPress ? 0.7 : 1}
       disabled={!onPress}
     >
-      {(title || icon) && (
+      {(title || icon) ? (
         <View style={styles.cardHeader}>
-          {icon && <Text style={styles.cardIcon}>{icon}</Text>}
-          {title && <Text style={styles.cardTitle}>{title}</Text>}
+          {icon ? <Text style={styles.cardIcon}>{icon}</Text> : null}
+          {title ? <Text style={styles.cardTitle}>{title}</Text> : null}
         </View>
-      )}
+      ) : null}
       {children}
     </TouchableOpacity>
   );
 };
 
-// ============================================================
-// کامپوننت هدر
-// ============================================================
-const Header = ({ title, subtitle, rightIcon, onRightPress, leftIcon, onLeftPress }) => {
+var Header = function(props) {
+  var title = props.title;
+  var subtitle = props.subtitle;
+  var rightIcon = props.rightIcon;
+  var onRightPress = props.onRightPress;
+  var leftIcon = props.leftIcon;
+  var onLeftPress = props.onLeftPress;
+
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        {leftIcon && (
+        {leftIcon ? (
           <TouchableOpacity onPress={onLeftPress} style={styles.headerButton}>
             <Text style={styles.headerIcon}>{leftIcon}</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
         <View>
           <Text style={styles.headerTitle}>{title}</Text>
-          {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
+          {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
         </View>
       </View>
-      {rightIcon && (
+      {rightIcon ? (
         <TouchableOpacity onPress={onRightPress} style={styles.headerButton}>
           <Text style={styles.headerIcon}>{rightIcon}</Text>
         </TouchableOpacity>
-      )}
+      ) : null}
     </View>
   );
 };
 
-// ============================================================
-// کامپوننت تب بار
-// ============================================================
-const TabBar = ({ tabs, activeTab, onTabChange }) => {
+var TabBar = function(props) {
+  var tabs = props.tabs;
+  var activeTab = props.activeTab;
+  var onTabChange = props.onTabChange;
+
   return (
     <View style={styles.tabBar}>
-      {tabs.map((tab, index) => (
-        <TouchableOpacity
-          key={index}
-          style={[
-            styles.tabItem,
-            activeTab === index && styles.tabItemActive,
-          ]}
-          onPress={() => onTabChange(index)}
-        >
-          <Text style={styles.tabIcon}>{tab.icon}</Text>
-          <Text
+      {tabs.map(function(tab, index) {
+        return (
+          <TouchableOpacity
+            key={index}
             style={[
-              styles.tabLabel,
-              activeTab === index && styles.tabLabelActive,
+              styles.tabItem,
+              activeTab === index ? styles.tabItemActive : null,
             ]}
+            onPress={function() { onTabChange(index); }}
           >
-            {tab.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
+            <Text style={styles.tabIcon}>{tab.icon}</Text>
+            <Text
+              style={[
+                styles.tabLabel,
+                activeTab === index ? styles.tabLabelActive : null,
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 };
 
 // ============================================================
-// صفحه اصلی (Home)
+// صفحه اصلی
 // ============================================================
-const HomeScreen = ({ navigation }) => {
-  const [deviceInfo, setDeviceInfo] = useState({
-    platform: Platform.OS,
-    version: Platform.Version,
-    isTV: Platform.isTV,
-  });
+var HomeScreen = function() {
+  var statsRef = useRef({ photos: 0, videos: 0, sensors: 0 });
+  var fadeAnim = useRef(new Animated.Value(0)).current;
+  var slideAnim = useRef(new Animated.Value(50)).current;
 
-  const [stats, setStats] = useState({
-    photos: 0,
-    videos: 0,
-    sensors: 0,
-    connections: 0,
-  });
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
-  useEffect(() => {
+  useEffect(function() {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -525,6 +430,16 @@ const HomeScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
+  var platformName = 'Unknown';
+  try {
+    platformName = Platform.OS === 'android' ? '🤖 Android' : '🍎 iOS';
+  } catch (e) {}
+
+  var platformVersion = 'Unknown';
+  try {
+    platformVersion = String(Platform.Version);
+  } catch (e) {}
+
   return (
     <Animated.View
       style={[
@@ -539,7 +454,7 @@ const HomeScreen = ({ navigation }) => {
         title="My Dynamic App"
         subtitle="React Native Runtime Engine"
         rightIcon={Icons.settings}
-        onRightPress={() => Alert.alert('تنظیمات', 'به زودی...')}
+        onRightPress={function() { Alert.alert('تنظیمات', 'به زودی...'); }}
       />
 
       <ScrollView
@@ -547,7 +462,6 @@ const HomeScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* بنر خوش‌آمدگویی */}
         <Card style={styles.welcomeCard}>
           <Text style={styles.welcomeEmoji}>🚀</Text>
           <Text style={styles.welcomeTitle}>خوش آمدید!</Text>
@@ -558,44 +472,32 @@ const HomeScreen = ({ navigation }) => {
           </Text>
         </Card>
 
-        {/* آمار */}
         <View style={styles.statsRow}>
           <Card style={styles.statCard}>
             <Text style={styles.statIcon}>{Icons.camera}</Text>
-            <Text style={styles.statValue}>{stats.photos}</Text>
+            <Text style={styles.statValue}>0</Text>
             <Text style={styles.statLabel}>عکس</Text>
           </Card>
           <Card style={styles.statCard}>
             <Text style={styles.statIcon}>{Icons.video}</Text>
-            <Text style={styles.statValue}>{stats.videos}</Text>
+            <Text style={styles.statValue}>0</Text>
             <Text style={styles.statLabel}>ویدیو</Text>
           </Card>
           <Card style={styles.statCard}>
             <Text style={styles.statIcon}>{Icons.sensor}</Text>
-            <Text style={styles.statValue}>{stats.sensors}</Text>
+            <Text style={styles.statValue}>0</Text>
             <Text style={styles.statLabel}>سنسور</Text>
           </Card>
         </View>
 
-        {/* اطلاعات دستگاه */}
-        <Card title="اطلاعات دستگاه" icon={Icons.info} style={styles.infoCard}>
+        <Card title="اطلاعات دستگاه" icon={Icons.info}>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>سیستم‌عامل:</Text>
-            <Text style={styles.infoValue}>
-              {deviceInfo.platform === 'android' ? '🤖 Android' : '🍎 iOS'}
-            </Text>
+            <Text style={styles.infoValue}>{platformName}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>نسخه:</Text>
-            <Text style={styles.infoValue}>{deviceInfo.version}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>معماری:</Text>
-            <Text style={styles.infoValue}>
-              {Platform.constants?.reactNativeVersion
-                ? `RN ${Platform.constants.reactNativeVersion.major}.${Platform.constants.reactNativeVersion.minor}`
-                : 'React Native'}
-            </Text>
+            <Text style={styles.infoValue}>{platformVersion}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>موتور JS:</Text>
@@ -609,47 +511,46 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </Card>
 
-        {/* دسترسی سریع */}
-        <Card title="دسترسی سریع" icon={Icons.lightning} style={styles.quickCard}>
+        <Card title="دسترسی سریع" icon={Icons.lightning}>
           <View style={styles.quickGrid}>
             <TouchableOpacity
               style={styles.quickItem}
-              onPress={() => Alert.alert('دوربین', 'دوربین باز شد! 📷')}
+              onPress={function() { Alert.alert('دوربین', 'دوربین باز شد! 📷'); }}
             >
               <Text style={styles.quickIcon}>{Icons.camera}</Text>
               <Text style={styles.quickLabel}>دوربین</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickItem}
-              onPress={() => Alert.alert('گالری', 'گالری باز شد! 🖼️')}
+              onPress={function() { Alert.alert('گالری', 'گالری باز شد! 🖼️'); }}
             >
               <Text style={styles.quickIcon}>{Icons.gallery}</Text>
               <Text style={styles.quickLabel}>گالری</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickItem}
-              onPress={() => Alert.alert('سنسورها', 'سنسورها فعال شدند! 📡')}
+              onPress={function() { Alert.alert('سنسورها', 'سنسورها فعال شدند! 📡'); }}
             >
               <Text style={styles.quickIcon}>{Icons.sensor}</Text>
               <Text style={styles.quickLabel}>سنسورها</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickItem}
-              onPress={() => Alert.alert('بلوتوث', 'بلوتوث فعال شد! 🔵')}
+              onPress={function() { Alert.alert('بلوتوث', 'بلوتوث فعال شد! 🔵'); }}
             >
               <Text style={styles.quickIcon}>{Icons.bluetooth}</Text>
               <Text style={styles.quickLabel}>بلوتوث</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickItem}
-              onPress={() => Alert.alert('موقعیت', 'GPS فعال شد! 📍')}
+              onPress={function() { Alert.alert('موقعیت', 'GPS فعال شد! 📍'); }}
             >
               <Text style={styles.quickIcon}>{Icons.location}</Text>
               <Text style={styles.quickLabel}>موقعیت</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickItem}
-              onPress={() => Alert.alert('فایل‌ها', 'مدیریت فایل! 📁')}
+              onPress={function() { Alert.alert('فایل‌ها', 'مدیریت فایل! 📁'); }}
             >
               <Text style={styles.quickIcon}>{Icons.folder}</Text>
               <Text style={styles.quickLabel}>فایل‌ها</Text>
@@ -657,12 +558,11 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </Card>
 
-        {/* دکمه‌های عملیاتی */}
         <View style={styles.actionButtons}>
           <CustomButton
             title="شروع عکاسی"
             icon={Icons.camera}
-            onPress={() => Alert.alert('دوربین', 'حالت عکاسی فعال شد!')}
+            onPress={function() { Alert.alert('دوربین', 'حالت عکاسی فعال شد!'); }}
             fullWidth
             size="large"
           />
@@ -670,7 +570,7 @@ const HomeScreen = ({ navigation }) => {
             title="اسکن محیط"
             icon={Icons.search}
             color={COLORS.secondary}
-            onPress={() => Alert.alert('اسکن', 'اسکن محیط شروع شد!')}
+            onPress={function() { Alert.alert('اسکن', 'اسکن محیط شروع شد!'); }}
             fullWidth
             size="large"
             style={{ marginTop: 12 }}
@@ -682,40 +582,61 @@ const HomeScreen = ({ navigation }) => {
 };
 
 // ============================================================
-// صفحه دوربین (Camera)
+// صفحه دوربین
 // ============================================================
-const CameraScreen = () => {
-  const [hasPermission, setHasPermission] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [flashMode, setFlashMode] = useState('off');
-  const [facing, setFacing] = useState('back');
-  const [photoCount, setPhotoCount] = useState(0);
-  const [lastPhoto, setLastPhoto] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordTime, setRecordTime] = useState(0);
-  const [filters, setFilters] = useState([
-    { name: 'بدون فیلتر', id: 'none', active: true },
-    { name: 'سیاه‌وسفید', id: 'bw', active: false },
-    { name: 'سپیا', id: 'sepia', active: false },
-    { name: 'وینتیج', id: 'vintage', active: false },
-    { name: 'سرد', id: 'cold', active: false },
-    { name: 'گرم', id: 'warm', active: false },
-  ]);
-  const [activeFilter, setActiveFilter] = useState('none');
+var CameraScreen = function() {
+  var hasPermissionState = useState(false);
+  var hasPermission = hasPermissionState[0];
+  var setHasPermission = hasPermissionState[1];
 
-  const recordTimer = useRef(null);
+  var flashModeState = useState('off');
+  var flashMode = flashModeState[0];
+  var setFlashMode = flashModeState[1];
 
-  useEffect(() => {
+  var facingState = useState('back');
+  var facing = facingState[0];
+  var setFacing = facingState[1];
+
+  var photoCountState = useState(0);
+  var photoCount = photoCountState[0];
+  var setPhotoCount = photoCountState[1];
+
+  var isRecordingState = useState(false);
+  var isRecording = isRecordingState[0];
+  var setIsRecording = isRecordingState[1];
+
+  var recordTimeState = useState(0);
+  var recordTime = recordTimeState[0];
+  var setRecordTime = recordTimeState[1];
+
+  var activeFilterState = useState('none');
+  var activeFilter = activeFilterState[0];
+  var setActiveFilter = activeFilterState[1];
+
+  var recordTimer = useRef(null);
+
+  var filters = [
+    { name: 'بدون فیلتر', id: 'none' },
+    { name: 'سیاه‌وسفید', id: 'bw' },
+    { name: 'سپیا', id: 'sepia' },
+    { name: 'وینتیج', id: 'vintage' },
+    { name: 'سرد', id: 'cold' },
+    { name: 'گرم', id: 'warm' },
+  ];
+
+  useEffect(function() {
     requestCameraPermission();
-    return () => {
-      if (recordTimer.current) clearInterval(recordTimer.current);
+    return function() {
+      if (recordTimer.current) {
+        clearInterval(recordTimer.current);
+      }
     };
   }, []);
 
-  const requestCameraPermission = async () => {
+  var requestCameraPermission = async function() {
     try {
       if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
+        var granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.CAMERA,
           {
             title: 'مجوز دوربین',
@@ -729,53 +650,39 @@ const CameraScreen = () => {
         setHasPermission(true);
       }
     } catch (err) {
-      console.warn('Camera permission error:', err);
       setHasPermission(false);
     }
   };
 
-  const takePhoto = () => {
-    setPhotoCount((prev) => prev + 1);
-    setLastPhoto({
-      id: Date.now(),
-      timestamp: new Date().toLocaleString('fa-IR'),
-      filter: activeFilter,
-      facing: facing,
-    });
-    Alert.alert('📸 عکس گرفته شد!', `عکس شماره ${photoCount + 1} ذخیره شد.`);
+  var takePhoto = function() {
+    setPhotoCount(photoCount + 1);
+    Alert.alert('📸 عکس گرفته شد!', 'عکس شماره ' + String(photoCount + 1) + ' ذخیره شد.');
   };
 
-  const toggleRecording = () => {
+  var toggleRecording = function() {
     if (isRecording) {
       clearInterval(recordTimer.current);
       setIsRecording(false);
-      Alert.alert('⏹️ ضبط متوقف شد', `مدت ضبط: ${recordTime} ثانیه`);
+      Alert.alert('⏹️ ضبط متوقف شد', 'مدت ضبط: ' + String(recordTime) + ' ثانیه');
       setRecordTime(0);
     } else {
       setIsRecording(true);
       setRecordTime(0);
-      recordTimer.current = setInterval(() => {
-        setRecordTime((prev) => prev + 1);
+      recordTimer.current = setInterval(function() {
+        setRecordTime(function(prev) { return prev + 1; });
       }, 1000);
     }
   };
 
-  const toggleFlash = () => {
-    const modes = ['off', 'on', 'auto', 'torch'];
-    const currentIndex = modes.indexOf(flashMode);
-    const nextIndex = (currentIndex + 1) % modes.length;
+  var toggleFlash = function() {
+    var modes = ['off', 'on', 'auto', 'torch'];
+    var currentIndex = modes.indexOf(flashMode);
+    var nextIndex = (currentIndex + 1) % modes.length;
     setFlashMode(modes[nextIndex]);
   };
 
-  const toggleFacing = () => {
-    setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
-  };
-
-  const selectFilter = (filterId) => {
-    setActiveFilter(filterId);
-    setFilters((prev) =>
-      prev.map((f) => ({ ...f, active: f.id === filterId }))
-    );
+  var toggleFacing = function() {
+    setFacing(facing === 'back' ? 'front' : 'back');
   };
 
   if (!hasPermission) {
@@ -799,105 +706,90 @@ const CameraScreen = () => {
     );
   }
 
+  var flashText = '⚡ خاموش';
+  if (flashMode === 'on') flashText = '⚡ روشن';
+  if (flashMode === 'auto') flashText = '⚡ خودکار';
+  if (flashMode === 'torch') flashText = '⚡ چراغ';
+
+  var filterName = 'بدون فیلتر';
+  for (var i = 0; i < filters.length; i++) {
+    if (filters[i].id === activeFilter) {
+      filterName = filters[i].name;
+      break;
+    }
+  }
+
+  var minutes = String(Math.floor(recordTime / 60));
+  if (minutes.length < 2) minutes = '0' + minutes;
+  var seconds = String(recordTime % 60);
+  if (seconds.length < 2) seconds = '0' + seconds;
+
   return (
     <View style={styles.screen}>
       <Header
         title="دوربین"
         subtitle={facing === 'back' ? 'دوربین پشت' : 'دوربین جلو'}
         leftIcon={Icons.close}
-        onLeftPress={() => setCameraActive(false)}
+        onLeftPress={function() { Alert.alert('بستن دوربین'); }}
         rightIcon={Icons.settings}
-        onRightPress={() => Alert.alert('تنظیمات دوربین')}
+        onRightPress={function() { Alert.alert('تنظیمات دوربین'); }}
       />
 
-      {/* نمای دوربین (شبیه‌سازی) */}
       <View style={styles.cameraPreview}>
         <View style={styles.cameraOverlay}>
-          <Text style={styles.cameraPlaceholder}>
-            {cameraActive ? '📷' : '📵'}
-          </Text>
+          <Text style={styles.cameraPlaceholder}>📷</Text>
           <Text style={styles.cameraText}>
-            {cameraActive
-              ? `دوربین ${facing === 'back' ? 'پشت' : 'جلو'} فعال است`
-              : 'دوربین غیرفعال است'}
+            دوربین {facing === 'back' ? 'پشت' : 'جلو'} فعال است
           </Text>
-          {isRecording && (
+          {isRecording ? (
             <View style={styles.recordingBadge}>
               <Text style={styles.recordingDot}>●</Text>
-              <Text style={styles.recordingTime}>
-                {Math.floor(recordTime / 60)
-                  .toString()
-                  .padStart(2, '0')}
-                :{(recordTime % 60).toString().padStart(2, '0')}
-              </Text>
+              <Text style={styles.recordingTime}>{minutes}:{seconds}</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
-        {/* اطلاعات فیلتر */}
         <View style={styles.filterBadge}>
-          <Text style={styles.filterBadgeText}>
-            {Icons.filter} {filters.find((f) => f.id === activeFilter)?.name}
-          </Text>
+          <Text style={styles.filterBadgeText}>{Icons.filter} {filterName}</Text>
         </View>
 
-        {/* اطلاعات فلش */}
         <View style={styles.flashBadge}>
-          <Text style={styles.flashBadgeText}>
-            {flashMode === 'off'
-              ? '⚡ خاموش'
-              : flashMode === 'on'
-              ? '⚡ روشن'
-              : flashMode === 'auto'
-              ? '⚡ خودکار'
-              : '⚡ چراغ'}
-          </Text>
+          <Text style={styles.flashBadgeText}>{flashText}</Text>
         </View>
       </View>
 
-      {/* فیلترها */}
       <ScrollView
         horizontal
         style={styles.filterScroll}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterScrollContent}
       >
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter.id}
-            style={[
-              styles.filterItem,
-              filter.active && styles.filterItemActive,
-            ]}
-            onPress={() => selectFilter(filter.id)}
-          >
-            <Text
+        {filters.map(function(filter) {
+          return (
+            <TouchableOpacity
+              key={filter.id}
               style={[
-                styles.filterText,
-                filter.active && styles.filterTextActive,
+                styles.filterItem,
+                activeFilter === filter.id ? styles.filterItemActive : null,
               ]}
+              onPress={function() { setActiveFilter(filter.id); }}
             >
-              {filter.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.filterText,
+                  activeFilter === filter.id ? styles.filterTextActive : null,
+                ]}
+              >
+                {filter.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
-      {/* کنترل‌های دوربین */}
       <View style={styles.cameraControls}>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={toggleFlash}
-        >
-          <Text style={styles.controlIcon}>
-            {flashMode === 'off'
-              ? '⚡'
-              : flashMode === 'on'
-              ? '⚡'
-              : flashMode === 'auto'
-              ? '⚡'
-              : '🔦'}
-          </Text>
+        <TouchableOpacity style={styles.controlButton} onPress={toggleFlash}>
+          <Text style={styles.controlIcon}>⚡</Text>
           <Text style={styles.controlLabel}>فلش</Text>
         </TouchableOpacity>
 
@@ -906,146 +798,158 @@ const CameraScreen = () => {
           onPress={takePhoto}
           onLongPress={toggleRecording}
         >
-          <View
-            style={[
-              styles.shutterInner,
-              isRecording && styles.shutterRecording,
-            ]}
-          >
-            <Text style={styles.shutterIcon}>
-              {isRecording ? '⏹️' : '📸'}
-            </Text>
+          <View style={[styles.shutterInner, isRecording ? styles.shutterRecording : null]}>
+            <Text style={styles.shutterIcon}>{isRecording ? '⏹️' : '📸'}</Text>
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={toggleFacing}
-        >
+        <TouchableOpacity style={styles.controlButton} onPress={toggleFacing}>
           <Text style={styles.controlIcon}>🔄</Text>
           <Text style={styles.controlLabel}>چرخش</Text>
         </TouchableOpacity>
       </View>
 
-      {/* آمار عکس‌ها */}
       <View style={styles.photoStats}>
-        <Text style={styles.photoStatsText}>
-          📸 {photoCount} عکس گرفته شده
-        </Text>
-        {lastPhoto && (
-          <Text style={styles.lastPhotoText}>
-            آخرین: {lastPhoto.timestamp}
-          </Text>
-        )}
+        <Text style={styles.photoStatsText}>📸 {String(photoCount)} عکس گرفته شده</Text>
       </View>
     </View>
   );
 };
 
 // ============================================================
-// صفحه سنسورها (Sensors)
+// صفحه سنسورها
 // ============================================================
-const SensorsScreen = () => {
-  const [sensors, setSensors] = useState({
-    accelerometer: { x: 0, y: 0, z: 0, active: false },
-    gyroscope: { x: 0, y: 0, z: 0, active: false },
-    magnetometer: { x: 0, y: 0, z: 0, active: false },
-    barometer: { pressure: 0, active: false },
-    light: { lux: 0, active: false },
-    proximity: { distance: 0, active: false },
+var SensorsScreen = function() {
+  var sensorsState = useState({
+    accelerometer: { x: '0.000', y: '0.000', z: '9.800', active: false },
+    gyroscope: { x: '0.000', y: '0.000', z: '0.000', active: false },
+    magnetometer: { x: '0.0', y: '0.0', z: '0.0', active: false },
+    barometer: { pressure: '1013.0', active: false },
+    light: { lux: '0', active: false },
+    proximity: { distance: '5', active: false },
   });
+  var sensors = sensorsState[0];
+  var setSensors = sensorsState[1];
 
-  const [batteryLevel, setBatteryLevel] = useState(85);
-  const [isCharging, setIsCharging] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSensors((prev) => ({
-        ...prev,
-        accelerometer: prev.accelerometer.active
-          ? {
-              ...prev.accelerometer,
-              x: (Math.random() * 2 - 1).toFixed(3),
-              y: (Math.random() * 2 - 1).toFixed(3),
-              z: (Math.random() * 2 - 1 + 9.8).toFixed(3),
+  useEffect(function() {
+    var interval = setInterval(function() {
+      setSensors(function(prev) {
+        var next = {};
+        var keys = Object.keys(prev);
+        for (var i = 0; i < keys.length; i++) {
+          var key = keys[i];
+          if (prev[key].active) {
+            if (key === 'accelerometer') {
+              next[key] = {
+                x: (Math.random() * 2 - 1).toFixed(3),
+                y: (Math.random() * 2 - 1).toFixed(3),
+                z: (Math.random() * 2 - 1 + 9.8).toFixed(3),
+                active: true,
+              };
+            } else if (key === 'gyroscope') {
+              next[key] = {
+                x: (Math.random() * 2 - 1).toFixed(3),
+                y: (Math.random() * 2 - 1).toFixed(3),
+                z: (Math.random() * 2 - 1).toFixed(3),
+                active: true,
+              };
+            } else if (key === 'magnetometer') {
+              next[key] = {
+                x: (Math.random() * 100 - 50).toFixed(1),
+                y: (Math.random() * 100 - 50).toFixed(1),
+                z: (Math.random() * 100 - 50).toFixed(1),
+                active: true,
+              };
+            } else if (key === 'barometer') {
+              next[key] = {
+                pressure: (1013 + Math.random() * 10 - 5).toFixed(1),
+                active: true,
+              };
+            } else if (key === 'light') {
+              next[key] = {
+                lux: String(Math.floor(Math.random() * 1000)),
+                active: true,
+              };
+            } else if (key === 'proximity') {
+              next[key] = {
+                distance: Math.random() > 0.5 ? '0' : '5',
+                active: true,
+              };
+            } else {
+              next[key] = prev[key];
             }
-          : prev.accelerometer,
-        gyroscope: prev.gyroscope.active
-          ? {
-              ...prev.gyroscope,
-              x: (Math.random() * 2 - 1).toFixed(3),
-              y: (Math.random() * 2 - 1).toFixed(3),
-              z: (Math.random() * 2 - 1).toFixed(3),
-            }
-          : prev.gyroscope,
-        magnetometer: prev.magnetometer.active
-          ? {
-              ...prev.magnetometer,
-              x: (Math.random() * 100 - 50).toFixed(1),
-              y: (Math.random() * 100 - 50).toFixed(1),
-              z: (Math.random() * 100 - 50).toFixed(1),
-            }
-          : prev.magnetometer,
-        barometer: prev.barometer.active
-          ? {
-              ...prev.barometer,
-              pressure: (1013 + Math.random() * 10 - 5).toFixed(1),
-            }
-          : prev.barometer,
-        light: prev.light.active
-          ? {
-              ...prev.light,
-              lux: Math.floor(Math.random() * 1000),
-            }
-          : prev.light,
-        proximity: prev.proximity.active
-          ? {
-              ...prev.proximity,
-              distance: Math.random() > 0.5 ? 0 : 5,
-            }
-          : prev.proximity,
-      }));
+          } else {
+            next[key] = prev[key];
+          }
+        }
+        return next;
+      });
     }, 500);
 
-    return () => clearInterval(interval);
+    return function() { clearInterval(interval); };
   }, []);
 
-  const toggleSensor = (sensorName) => {
-    setSensors((prev) => ({
-      ...prev,
-      [sensorName]: {
-        ...prev[sensorName],
-        active: !prev[sensorName].active,
-      },
-    }));
+  var toggleSensor = function(sensorName) {
+    setSensors(function(prev) {
+      var next = {};
+      var keys = Object.keys(prev);
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        if (key === sensorName) {
+          var copy = {};
+          var propKeys = Object.keys(prev[key]);
+          for (var j = 0; j < propKeys.length; j++) {
+            copy[propKeys[j]] = prev[key][propKeys[j]];
+          }
+          copy.active = !prev[key].active;
+          next[key] = copy;
+        } else {
+          next[key] = prev[key];
+        }
+      }
+      return next;
+    });
   };
 
-  const SensorCard = ({ name, icon, data, active, onToggle }) => (
-    <Card style={styles.sensorCard}>
-      <View style={styles.sensorHeader}>
-        <View style={styles.sensorTitleRow}>
-          <Text style={styles.sensorIcon}>{icon}</Text>
-          <Text style={styles.sensorName}>{name}</Text>
+  var renderSensorCard = function(name, icon, sensorKey) {
+    var sensor = sensors[sensorKey];
+    var dataKeys = Object.keys(sensor);
+    var dataItems = [];
+    for (var i = 0; i < dataKeys.length; i++) {
+      if (dataKeys[i] !== 'active') {
+        dataItems.push({ key: dataKeys[i], value: String(sensor[dataKeys[i]]) });
+      }
+    }
+
+    return (
+      <Card key={sensorKey} style={styles.sensorCard}>
+        <View style={styles.sensorHeader}>
+          <View style={styles.sensorTitleRow}>
+            <Text style={styles.sensorIcon}>{icon}</Text>
+            <Text style={styles.sensorName}>{name}</Text>
+          </View>
+          <Switch
+            value={sensor.active}
+            onValueChange={function() { toggleSensor(sensorKey); }}
+            trackColor={{ true: COLORS.success, false: COLORS.textMuted }}
+            thumbColor={sensor.active ? '#fff' : '#ccc'}
+          />
         </View>
-        <Switch
-          value={active}
-          onValueChange={onToggle}
-          trackColor={{ true: COLORS.success, false: COLORS.textMuted }}
-          thumbColor={active ? '#fff' : '#ccc'}
-        />
-      </View>
-      {active && (
-        <View style={styles.sensorData}>
-          {Object.entries(data).map(([key, value]) => (
-            <View key={key} style={styles.sensorDataRow}>
-              <Text style={styles.sensorDataLabel}>{key}:</Text>
-              <Text style={styles.sensorDataValue}>{value}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </Card>
-  );
+        {sensor.active ? (
+          <View style={styles.sensorData}>
+            {dataItems.map(function(item) {
+              return (
+                <View key={item.key} style={styles.sensorDataRow}>
+                  <Text style={styles.sensorDataLabel}>{item.key}:</Text>
+                  <Text style={styles.sensorDataValue}>{item.value}</Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+      </Card>
+    );
+  };
 
   return (
     <View style={styles.screen}>
@@ -1056,115 +960,35 @@ const SensorsScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* باتری */}
-        <Card title="باتری" icon={Icons.battery} style={styles.batteryCard}>
+        <Card title="باتری" icon={Icons.battery}>
           <View style={styles.batteryRow}>
-            <Text style={styles.batteryIcon}>
-              {batteryLevel > 50 ? '🔋' : batteryLevel > 20 ? '🪫' : '🪫'}
-            </Text>
+            <Text style={styles.batteryIcon}>🔋</Text>
             <View style={styles.batteryInfo}>
-              <Text style={styles.batteryLevel}>{batteryLevel}%</Text>
-              <Text style={styles.batteryStatus}>
-                {isCharging ? '⚡ در حال شارژ' : '🔌 بدون شارژ'}
-              </Text>
+              <Text style={styles.batteryLevel}>85%</Text>
+              <Text style={styles.batteryStatus}>🔌 بدون شارژ</Text>
             </View>
             <View style={styles.batteryBar}>
-              <View
-                style={[
-                  styles.batteryFill,
-                  {
-                    width: `${batteryLevel}%`,
-                    backgroundColor:
-                      batteryLevel > 50
-                        ? COLORS.success
-                        : batteryLevel > 20
-                        ? COLORS.warning
-                        : COLORS.error,
-                  },
-                ]}
-              />
+              <View style={[styles.batteryFill, { width: '85%', backgroundColor: COLORS.success }]} />
             </View>
           </View>
         </Card>
 
-        {/* شتاب‌سنج */}
-        <SensorCard
-          name="شتاب‌سنج (Accelerometer)"
-          icon="📱"
-          data={{
-            x: sensors.accelerometer.x,
-            y: sensors.accelerometer.y,
-            z: sensors.accelerometer.z,
-          }}
-          active={sensors.accelerometer.active}
-          onToggle={() => toggleSensor('accelerometer')}
-        />
-
-        {/* ژیروسکوپ */}
-        <SensorCard
-          name="ژیروسکوپ (Gyroscope)"
-          icon="🔄"
-          data={{
-            x: sensors.gyroscope.x,
-            y: sensors.gyroscope.y,
-            z: sensors.gyroscope.z,
-          }}
-          active={sensors.gyroscope.active}
-          onToggle={() => toggleSensor('gyroscope')}
-        />
-
-        {/* مغناطیس‌سنج */}
-        <SensorCard
-          name="مغناطیس‌سنج (Magnetometer)"
-          icon="🧭"
-          data={{
-            x: sensors.magnetometer.x,
-            y: sensors.magnetometer.y,
-            z: sensors.magnetometer.z,
-          }}
-          active={sensors.magnetometer.active}
-          onToggle={() => toggleSensor('magnetometer')}
-        />
-
-        {/* فشارسنج */}
-        <SensorCard
-          name="فشارسنج (Barometer)"
-          icon="🌡️"
-          data={{ pressure: sensors.barometer.pressure + ' hPa' }}
-          active={sensors.barometer.active}
-          onToggle={() => toggleSensor('barometer')}
-        />
-
-        {/* نورسنج */}
-        <SensorCard
-          name="نورسنج (Light Sensor)"
-          icon="☀️"
-          data={{ lux: sensors.light.lux + ' lux' }}
-          active={sensors.light.active}
-          onToggle={() => toggleSensor('light')}
-        />
-
-        {/* مجاورت */}
-        <SensorCard
-          name="مجاورت (Proximity)"
-          icon="📡"
-          data={{
-            distance: sensors.proximity.distance + ' cm',
-            status: sensors.proximity.distance === 0 ? 'نزدیک' : 'دور',
-          }}
-          active={sensors.proximity.active}
-          onToggle={() => toggleSensor('proximity')}
-        />
+        {renderSensorCard('شتاب‌سنج (Accelerometer)', '📱', 'accelerometer')}
+        {renderSensorCard('ژیروسکوپ (Gyroscope)', '🔄', 'gyroscope')}
+        {renderSensorCard('مغناطیس‌سنج (Magnetometer)', '🧭', 'magnetometer')}
+        {renderSensorCard('فشارسنج (Barometer)', '🌡️', 'barometer')}
+        {renderSensorCard('نورسنج (Light Sensor)', '☀️', 'light')}
+        {renderSensorCard('مجاورت (Proximity)', '📡', 'proximity')}
       </ScrollView>
     </View>
   );
 };
 
 // ============================================================
-// صفحه تنظیمات (Settings)
+// صفحه تنظیمات
 // ============================================================
-const SettingsScreen = () => {
-  const [settings, setSettings] = useState({
+var SettingsScreen = function() {
+  var settingsState = useState({
     darkMode: true,
     notifications: true,
     sound: true,
@@ -1176,33 +1000,49 @@ const SettingsScreen = () => {
     hotReload: true,
     cacheEnabled: true,
   });
+  var settings = settingsState[0];
+  var setSettings = settingsState[1];
 
-  const toggleSetting = (key) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  var toggleSetting = function(key) {
+    setSettings(function(prev) {
+      var next = {};
+      var keys = Object.keys(prev);
+      for (var i = 0; i < keys.length; i++) {
+        next[keys[i]] = prev[keys[i]];
+      }
+      next[key] = !prev[key];
+      return next;
+    });
   };
 
-  const SettingRow = ({ label, icon, value, onToggle, description }) => (
-    <View style={styles.settingRow}>
-      <View style={styles.settingInfo}>
-        <View style={styles.settingLabelRow}>
-          <Text style={styles.settingIcon}>{icon}</Text>
-          <Text style={styles.settingLabel}>{label}</Text>
+  var renderSettingRow = function(label, icon, key, description) {
+    return (
+      <View key={key} style={styles.settingRow}>
+        <View style={styles.settingInfo}>
+          <View style={styles.settingLabelRow}>
+            <Text style={styles.settingIcon}>{icon}</Text>
+            <Text style={styles.settingLabel}>{label}</Text>
+          </View>
+          {description ? (
+            <Text style={styles.settingDescription}>{description}</Text>
+          ) : null}
         </View>
-        {description && (
-          <Text style={styles.settingDescription}>{description}</Text>
-        )}
+        <Switch
+          value={settings[key]}
+          onValueChange={function() { toggleSetting(key); }}
+          trackColor={{ true: COLORS.primary, false: COLORS.textMuted }}
+          thumbColor={settings[key] ? '#fff' : '#ccc'}
+        />
       </View>
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        trackColor={{ true: COLORS.primary, false: COLORS.textMuted }}
-        thumbColor={value ? '#fff' : '#ccc'}
-      />
-    </View>
-  );
+    );
+  };
+
+  var buildDate = '';
+  try {
+    buildDate = new Date().toLocaleDateString();
+  } catch (e) {
+    buildDate = 'Unknown';
+  }
 
   return (
     <View style={styles.screen}>
@@ -1213,94 +1053,29 @@ const SettingsScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ظاهر */}
-        <Card title="ظاهر" icon="🎨" style={styles.settingsCard}>
-          <SettingRow
-            label="حالت تاریک"
-            icon="🌙"
-            value={settings.darkMode}
-            onToggle={() => toggleSetting('darkMode')}
-            description="استفاده از تم تاریک"
-          />
-          <SettingRow
-            label="نمایش FPS"
-            icon="📊"
-            value={settings.showFPS}
-            onToggle={() => toggleSetting('showFPS')}
-            description="نمایش فریم بر ثانیه"
-          />
+        <Card title="ظاهر" icon="🎨">
+          {renderSettingRow('حالت تاریک', '🌙', 'darkMode', 'استفاده از تم تاریک')}
+          {renderSettingRow('نمایش FPS', '📊', 'showFPS', 'نمایش فریم بر ثانیه')}
         </Card>
 
-        {/* اعلان‌ها */}
-        <Card title="اعلان‌ها" icon="🔔" style={styles.settingsCard}>
-          <SettingRow
-            label="اعلان‌ها"
-            icon="🔔"
-            value={settings.notifications}
-            onToggle={() => toggleSetting('notifications')}
-            description="دریافت اعلان‌ها"
-          />
-          <SettingRow
-            label="صدا"
-            icon="🔊"
-            value={settings.sound}
-            onToggle={() => toggleSetting('sound')}
-            description="پخش صدا"
-          />
-          <SettingRow
-            label="لرزش"
-            icon="📳"
-            value={settings.vibration}
-            onToggle={() => toggleSetting('vibration')}
-            description="لرزش دستگاه"
-          />
+        <Card title="اعلان‌ها" icon="🔔">
+          {renderSettingRow('اعلان‌ها', '🔔', 'notifications', 'دریافت اعلان‌ها')}
+          {renderSettingRow('صدا', '🔊', 'sound', 'پخش صدا')}
+          {renderSettingRow('لرزش', '📳', 'vibration', 'لرزش دستگاه')}
         </Card>
 
-        {/* دوربین */}
-        <Card title="دوربین" icon="📷" style={styles.settingsCard}>
-          <SettingRow
-            label="ذخیره خودکار"
-            icon="💾"
-            value={settings.autoSave}
-            onToggle={() => toggleSetting('autoSave')}
-            description="ذخیره خودکار عکس‌ها"
-          />
-          <SettingRow
-            label="کیفیت بالا"
-            icon="✨"
-            value={settings.highQuality}
-            onToggle={() => toggleSetting('highQuality')}
-            description="عکاسی با کیفیت بالا"
-          />
+        <Card title="دوربین" icon="📷">
+          {renderSettingRow('ذخیره خودکار', '💾', 'autoSave', 'ذخیره خودکار عکس‌ها')}
+          {renderSettingRow('کیفیت بالا', '✨', 'highQuality', 'عکاسی با کیفیت بالا')}
         </Card>
 
-        {/* توسعه‌دهنده */}
-        <Card title="توسعه‌دهنده" icon="💻" style={styles.settingsCard}>
-          <SettingRow
-            label="حالت توسعه‌دهنده"
-            icon="🔧"
-            value={settings.developerMode}
-            onToggle={() => toggleSetting('developerMode')}
-            description="فعال‌سازی ابزارهای توسعه"
-          />
-          <SettingRow
-            label="Hot Reload"
-            icon="🔄"
-            value={settings.hotReload}
-            onToggle={() => toggleSetting('hotReload')}
-            description="بارگذاری مجدد خودکار"
-          />
-          <SettingRow
-            label="کش"
-            icon="📦"
-            value={settings.cacheEnabled}
-            onToggle={() => toggleSetting('cacheEnabled')}
-            description="استفاده از حافظه موقت"
-          />
+        <Card title="توسعه‌دهنده" icon="💻">
+          {renderSettingRow('حالت توسعه‌دهنده', '🔧', 'developerMode', 'فعال‌سازی ابزارهای توسعه')}
+          {renderSettingRow('Hot Reload', '🔄', 'hotReload', 'بارگذاری مجدد خودکار')}
+          {renderSettingRow('کش', '📦', 'cacheEnabled', 'استفاده از حافظه موقت')}
         </Card>
 
-        {/* اطلاعات */}
-        <Card title="درباره اپلیکیشن" icon="ℹ️" style={styles.settingsCard}>
+        <Card title="درباره اپلیکیشن" icon="ℹ️">
           <View style={styles.aboutRow}>
             <Text style={styles.aboutLabel}>نسخه:</Text>
             <Text style={styles.aboutValue}>1.0.0</Text>
@@ -1315,28 +1090,23 @@ const SettingsScreen = () => {
           </View>
           <View style={styles.aboutRow}>
             <Text style={styles.aboutLabel}>تاریخ ساخت:</Text>
-            <Text style={styles.aboutValue}>
-              {new Date().toLocaleDateString('fa-IR')}
-            </Text>
+            <Text style={styles.aboutValue}>{buildDate}</Text>
           </View>
         </Card>
 
-        {/* دکمه‌ها */}
         <View style={styles.settingsButtons}>
           <CustomButton
             title="پاک کردن کش"
             icon={Icons.trash}
             color={COLORS.warning}
-            onPress={() => Alert.alert('کش', 'کش پاک شد! ✅')}
+            onPress={function() { Alert.alert('کش', 'کش پاک شد! ✅'); }}
             fullWidth
           />
           <CustomButton
             title="بازنشانی تنظیمات"
             icon={Icons.refresh}
             color={COLORS.error}
-            onPress={() =>
-              Alert.alert('بازنشانی', 'تنظیمات به حالت اولیه بازگشت! ✅')
-            }
+            onPress={function() { Alert.alert('بازنشانی', 'تنظیمات به حالت اولیه بازگشت! ✅'); }}
             fullWidth
             style={{ marginTop: 12 }}
           />
@@ -1349,23 +1119,28 @@ const SettingsScreen = () => {
 // ============================================================
 // اپلیکیشن اصلی
 // ============================================================
-const App = () => {
-  const [activeTab, setActiveTab] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+var AppContent = function() {
+  var activeTabState = useState(0);
+  var activeTab = activeTabState[0];
+  var setActiveTab = activeTabState[1];
 
-  const tabs = [
+  var isLoadingState = useState(true);
+  var isLoading = isLoadingState[0];
+  var setIsLoading = isLoadingState[1];
+
+  var tabs = [
     { label: 'خانه', icon: Icons.home },
     { label: 'دوربین', icon: Icons.camera },
     { label: 'سنسورها', icon: Icons.sensor },
     { label: 'تنظیمات', icon: Icons.settings },
   ];
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  useEffect(function() {
+    var timer = setTimeout(function() {
       setIsLoading(false);
     }, 1500);
 
-    return () => clearTimeout(timer);
+    return function() { clearTimeout(timer); };
   }, []);
 
   if (isLoading) {
@@ -1374,615 +1149,148 @@ const App = () => {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
         <Text style={styles.loadingEmoji}>🚀</Text>
         <Text style={styles.loadingTitle}>My Dynamic App</Text>
-        <ActivityIndicator
-          size="large"
-          color={COLORS.primary}
-          style={{ marginTop: 20 }}
-        />
+        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
         <Text style={styles.loadingText}>در حال بارگذاری...</Text>
         <Text style={styles.loadingSubtext}>React Native + Hermes Engine</Text>
       </View>
     );
   }
 
-  const renderScreen = () => {
-    switch (activeTab) {
-      case 0:
-        return <HomeScreen />;
-      case 1:
-        return <CameraScreen />;
-      case 2:
-        return <SensorsScreen />;
-      case 3:
-        return <SettingsScreen />;
-      default:
-        return <HomeScreen />;
-    }
-  };
+  var screen = null;
+  if (activeTab === 0) {
+    screen = <HomeScreen />;
+  } else if (activeTab === 1) {
+    screen = <CameraScreen />;
+  } else if (activeTab === 2) {
+    screen = <SensorsScreen />;
+  } else if (activeTab === 3) {
+    screen = <SettingsScreen />;
+  } else {
+    screen = <HomeScreen />;
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      {renderScreen()}
+      {screen}
       <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-    </SafeAreaView>
+    </View>
+  );
+};
+
+var App = function() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 };
 
 // ============================================================
 // استایل‌ها
 // ============================================================
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-
-  // Loading Screen
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  loadingEmoji: {
-    fontSize: 80,
-    marginBottom: 20,
-  },
-  loadingTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 10,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    marginTop: 20,
-  },
-  loadingSubtext: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 8,
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.backgroundLight,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  headerButton: {
-    padding: 8,
-  },
-  headerIcon: {
-    fontSize: 22,
-  },
-
-  // Tab Bar
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.backgroundLight,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-    paddingTop: 8,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  tabItemActive: {
-    backgroundColor: 'rgba(233, 69, 96, 0.1)',
-    borderRadius: 12,
-  },
-  tabIcon: {
-    fontSize: 20,
-    marginBottom: 2,
-  },
-  tabLabel: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-  },
-  tabLabelActive: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
-
-  // Button
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  buttonText: {
-    fontWeight: 'bold',
-  },
-
-  // Card
-  card: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-
-  // Welcome Card
-  welcomeCard: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    backgroundColor: COLORS.secondary,
-  },
-  welcomeEmoji: {
-    fontSize: 50,
-    marginBottom: 12,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 4,
-    paddingVertical: 16,
-  },
-  statIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-
-  // Info Card
-  infoCard: {},
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-  },
-  infoValue: {
-    fontSize: 13,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-
-  // Quick Access
-  quickCard: {},
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  quickItem: {
-    width: '30%',
-    alignItems: 'center',
-    paddingVertical: 16,
-    backgroundColor: COLORS.backgroundLight,
-    borderRadius: 16,
-    marginBottom: 10,
-  },
-  quickIcon: {
-    fontSize: 28,
-    marginBottom: 6,
-  },
-  quickLabel: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-  },
-
-  // Action Buttons
-  actionButtons: {
-    marginTop: 8,
-  },
-
-  // Permission
-  permissionContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  permissionEmoji: {
-    fontSize: 80,
-    marginBottom: 20,
-  },
-  permissionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  permissionText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-
-  // Camera
-  cameraPreview: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  cameraOverlay: {
-    alignItems: 'center',
-  },
-  cameraPlaceholder: {
-    fontSize: 80,
-    marginBottom: 16,
-  },
-  cameraText: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-  },
-  recordingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,0,0,0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 16,
-  },
-  recordingDot: {
-    color: '#fff',
-    fontSize: 12,
-    marginRight: 6,
-  },
-  recordingTime: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  filterBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-  },
-  flashBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  flashBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-  },
-
-  // Filters
-  filterScroll: {
-    maxHeight: 50,
-    backgroundColor: COLORS.backgroundLight,
-  },
-  filterScrollContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  filterItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.card,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  filterItemActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  filterTextActive: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-
-  // Camera Controls
-  cameraControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: COLORS.backgroundLight,
-  },
-  controlButton: {
-    alignItems: 'center',
-    padding: 12,
-  },
-  controlIcon: {
-    fontSize: 28,
-    marginBottom: 4,
-  },
-  controlLabel: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-  },
-  shutterButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  shutterInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shutterRecording: {
-    backgroundColor: COLORS.error,
-    borderRadius: 8,
-    width: 40,
-    height: 40,
-  },
-  shutterIcon: {
-    fontSize: 24,
-  },
-
-  // Photo Stats
-  photoStats: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  photoStatsText: {
-    fontSize: 14,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  lastPhotoText: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-
-  // Sensors
-  sensorCard: {
-    marginBottom: 12,
-  },
-  sensorHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sensorTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sensorIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  sensorName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  sensorData: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  sensorDataRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  sensorDataLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  sensorDataValue: {
-    fontSize: 12,
-    color: COLORS.success,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-
-  // Battery
-  batteryCard: {},
-  batteryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  batteryIcon: {
-    fontSize: 32,
-    marginRight: 12,
-  },
-  batteryInfo: {
-    marginRight: 16,
-  },
-  batteryLevel: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  batteryStatus: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  batteryBar: {
-    flex: 1,
-    height: 12,
-    backgroundColor: COLORS.background,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  batteryFill: {
-    height: '100%',
-    borderRadius: 6,
-  },
-
-  // Settings
-  settingsCard: {
-    marginBottom: 16,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  settingLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  settingIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  settingLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  settingDescription: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    marginTop: 4,
-    marginLeft: 26,
-  },
-  aboutRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  aboutLabel: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-  },
-  aboutValue: {
-    fontSize: 13,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  settingsButtons: {
-    marginTop: 8,
-  },
+var styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 100 },
+  loadingScreen: { flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  loadingEmoji: { fontSize: 80, marginBottom: 20 },
+  loadingTitle: { fontSize: 28, fontWeight: 'bold', color: COLORS.text, marginBottom: 10 },
+  loadingText: { fontSize: 16, color: COLORS.textSecondary, marginTop: 20 },
+  loadingSubtext: { fontSize: 12, color: COLORS.textMuted, marginTop: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.backgroundLight, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.text },
+  headerSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  headerButton: { padding: 8 },
+  headerIcon: { fontSize: 22 },
+  tabBar: { flexDirection: 'row', backgroundColor: COLORS.backgroundLight, borderTopWidth: 1, borderTopColor: COLORS.border, paddingBottom: 8, paddingTop: 8 },
+  tabItem: { flex: 1, alignItems: 'center', paddingVertical: 6 },
+  tabItemActive: { backgroundColor: 'rgba(233, 69, 96, 0.1)', borderRadius: 12 },
+  tabIcon: { fontSize: 20, marginBottom: 2 },
+  tabLabel: { fontSize: 10, color: COLORS.textMuted },
+  tabLabelActive: { color: COLORS.primary, fontWeight: 'bold' },
+  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 16, elevation: 4 },
+  buttonText: { fontWeight: 'bold' },
+  card: { backgroundColor: COLORS.card, borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border, elevation: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  cardIcon: { fontSize: 20, marginRight: 8 },
+  cardTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
+  welcomeCard: { alignItems: 'center', paddingVertical: 24, backgroundColor: COLORS.secondary },
+  welcomeEmoji: { fontSize: 50, marginBottom: 12 },
+  welcomeTitle: { fontSize: 24, fontWeight: 'bold', color: COLORS.text, marginBottom: 8 },
+  welcomeText: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  statCard: { flex: 1, alignItems: 'center', marginHorizontal: 4, paddingVertical: 16 },
+  statIcon: { fontSize: 24, marginBottom: 8 },
+  statValue: { fontSize: 22, fontWeight: 'bold', color: COLORS.text },
+  statLabel: { fontSize: 11, color: COLORS.textSecondary, marginTop: 4 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  infoLabel: { fontSize: 13, color: COLORS.textSecondary },
+  infoValue: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  quickItem: { width: '30%', alignItems: 'center', paddingVertical: 16, backgroundColor: COLORS.backgroundLight, borderRadius: 16, marginBottom: 10 },
+  quickIcon: { fontSize: 28, marginBottom: 6 },
+  quickLabel: { fontSize: 11, color: COLORS.textSecondary },
+  actionButtons: { marginTop: 8 },
+  permissionContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  permissionEmoji: { fontSize: 80, marginBottom: 20 },
+  permissionTitle: { fontSize: 22, fontWeight: 'bold', color: COLORS.text, marginBottom: 12 },
+  permissionText: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  cameraPreview: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  cameraOverlay: { alignItems: 'center' },
+  cameraPlaceholder: { fontSize: 80, marginBottom: 16 },
+  cameraText: { fontSize: 16, color: COLORS.textSecondary },
+  recordingBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,0,0,0.8)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginTop: 16 },
+  recordingDot: { color: '#fff', fontSize: 12, marginRight: 6 },
+  recordingTime: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  filterBadge: { position: 'absolute', top: 16, left: 16, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  filterBadgeText: { color: '#fff', fontSize: 12 },
+  flashBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  flashBadgeText: { color: '#fff', fontSize: 12 },
+  filterScroll: { maxHeight: 50, backgroundColor: COLORS.backgroundLight },
+  filterScrollContent: { paddingHorizontal: 12, paddingVertical: 8 },
+  filterItem: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.card, marginRight: 8, borderWidth: 1, borderColor: COLORS.border },
+  filterItemActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterText: { fontSize: 12, color: COLORS.textSecondary },
+  filterTextActive: { color: '#fff', fontWeight: 'bold' },
+  cameraControls: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingVertical: 20, backgroundColor: COLORS.backgroundLight },
+  controlButton: { alignItems: 'center', padding: 12 },
+  controlIcon: { fontSize: 28, marginBottom: 4 },
+  controlLabel: { fontSize: 10, color: COLORS.textSecondary },
+  shutterButton: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff' },
+  shutterInner: { width: 58, height: 58, borderRadius: 29, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
+  shutterRecording: { backgroundColor: COLORS.error, borderRadius: 8, width: 40, height: 40 },
+  shutterIcon: { fontSize: 24 },
+  photoStats: { paddingVertical: 12, alignItems: 'center', backgroundColor: COLORS.background },
+  photoStatsText: { fontSize: 14, color: COLORS.text, fontWeight: '600' },
+  sensorCard: { marginBottom: 12 },
+  sensorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sensorTitleRow: { flexDirection: 'row', alignItems: 'center' },
+  sensorIcon: { fontSize: 20, marginRight: 8 },
+  sensorName: { fontSize: 14, fontWeight: '600', color: COLORS.text },
+  sensorData: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  sensorDataRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+  sensorDataLabel: { fontSize: 12, color: COLORS.textSecondary },
+  sensorDataValue: { fontSize: 12, color: COLORS.success },
+  batteryRow: { flexDirection: 'row', alignItems: 'center' },
+  batteryIcon: { fontSize: 32, marginRight: 12 },
+  batteryInfo: { marginRight: 16 },
+  batteryLevel: { fontSize: 20, fontWeight: 'bold', color: COLORS.text },
+  batteryStatus: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
+  batteryBar: { flex: 1, height: 12, backgroundColor: COLORS.background, borderRadius: 6, overflow: 'hidden' },
+  batteryFill: { height: '100%', borderRadius: 6 },
+  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  settingInfo: { flex: 1, marginRight: 12 },
+  settingLabelRow: { flexDirection: 'row', alignItems: 'center' },
+  settingIcon: { fontSize: 18, marginRight: 8 },
+  settingLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text },
+  settingDescription: { fontSize: 11, color: COLORS.textMuted, marginTop: 4, marginLeft: 26 },
+  aboutRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  aboutLabel: { fontSize: 13, color: COLORS.textSecondary },
+  aboutValue: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
+  settingsButtons: { marginTop: 8 },
 });
 
 export default App;
